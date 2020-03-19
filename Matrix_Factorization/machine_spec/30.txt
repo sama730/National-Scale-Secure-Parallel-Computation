@@ -1,0 +1,14 @@
+#IPs of all the machines used
+0 35.169.173.66
+1 35.166.85.213
+2 54.71.32.165
+3 34.205.238.99
+processor_spec:
+# Alice:
+AliceMachines: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+# Bob:
+BobMachines: 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+# Charlie:
+CharlieMachines: 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2
+# David:
+DavidMachines: 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3
