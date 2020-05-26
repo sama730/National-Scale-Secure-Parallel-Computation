@@ -1,4 +1,4 @@
-﻿#ifndef EMULATED_MASKED_EVALUATION_H
+#ifndef EMULATED_MASKED_EVALUATION_H
 #define EMULATED_MASKED_EVALUATION_H
 
 #pragma once
@@ -21,7 +21,7 @@ namespace TwoPartyMaskedEvaluation
 		PreprocessingShare *bobShare;
 		LayeredArithmeticCircuit *lc;
 		
-		std::vector<std::vector<int64_t> > maskedEvaluation;
+		std::vector<std::vector<uint64_t> > maskedEvaluation;
 		std::vector<int> *maskIndex;
 		
 		bool inputAdded = false;
@@ -38,11 +38,11 @@ namespace TwoPartyMaskedEvaluation
 		EmulatedMaskedEvaluation(PreprocessingShare *aliceShare, PreprocessingShare *bobShare, LayeredArithmeticCircuit *lc);
 		EmulatedMaskedEvaluation(PreprocessingShare *aliceShare, PreprocessingShare *bobShare, std::vector<int> *maskIndex, LayeredArithmeticCircuit *lc);
 
-// 		void AddInput(std::vector<int64_t> input, Range *range);
-		void AddInput(std::vector<std::vector<int64_t> >&& input, Range *range);
+// 		void AddInput(std::vector<uint64_t> input, Range *range);
+		void AddInput(std::vector<std::vector<uint64_t> >&& input, Range *range);
 		
-// 		std::vector<int64_t> Decrypt(std::vector<int64_t> mask, Range *range);
-		std::vector<std::vector<int64_t> > Decrypt(std::vector<int64_t> mask, Range *range);
+// 		std::vector<uint64_t> Decrypt(std::vector<uint64_t> mask, Range *range);
+		std::vector<std::vector<uint64_t> > Decrypt(std::vector<uint64_t> mask, Range *range);
 
 		void EvaluateCircuit();
 
@@ -61,7 +61,7 @@ namespace TwoPartyMaskedEvaluation
 		
 		void EvaluateDotGate(int layer, PreprocessingShare *aliceBeaver, PreprocessingShare *bobBeaver);
 
-		int64_t BeaverEvaluation(MultiplicationGate *g, int64_t beaver, int64_t ma, int64_t mb, PreprocessingShare *share);
+		uint64_t BeaverEvaluation(MultiplicationGate *g, uint64_t beaver, uint64_t ma, uint64_t mb, PreprocessingShare *share);
 	};
 }
 

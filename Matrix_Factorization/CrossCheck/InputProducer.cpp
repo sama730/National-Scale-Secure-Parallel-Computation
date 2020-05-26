@@ -1,4 +1,4 @@
-﻿#include <cassert>
+#include <cassert>
 #include <stdint.h>
 #include <sstream>
 #include "InputProducer.h"
@@ -14,25 +14,25 @@ using namespace Utility;
 namespace CrossCheck
 {
 
-	InputProducer::InputProducer(Communicator *communicator, std::vector<int64_t> masks, MaskedEvaluation *eval, PreprocessingShare *share) : eval(eval), masks(masks), communicator(communicator), share(share)
+	InputProducer::InputProducer(Communicator *communicator, std::vector<uint64_t> masks, MaskedEvaluation *eval, PreprocessingShare *share) : eval(eval), masks(masks), communicator(communicator), share(share)
 	{
 // 		MyDebug::NonNull(communicator, masks, eval,share);
 	}
 
-	void InputProducer::AddInput(IRange *myRange, IRange *evaluationPartnerRange, IRange *aliceRange, IRange *bobRange, IMaybe<std::vector<std::vector<int64_t> > > *myInput)
+	void InputProducer::AddInput(IRange *myRange, IRange *evaluationPartnerRange, IRange *aliceRange, IRange *bobRange, IMaybe<std::vector<std::vector<uint64_t> > > *myInput)
 	{
 // 		MyDebug::NonNull(myRange, evaluationPartnerRange, aliceRange, bobRange, myInput);
-		assert((dynamic_cast<Just<std::vector<std::vector<int64_t> > *>(myInput) != nullptr) || (dynamic_cast<EmptyRange *>(myRange) != nullptr));
+		assert((dynamic_cast<Just<std::vector<std::vector<uint64_t> > *>(myInput) != nullptr) || (dynamic_cast<EmptyRange *>(myRange) != nullptr));
 		ss << "AddInput\n";
 		AddEvaluationInput(myRange, evaluationPartnerRange, myInput);
 		TransferInput(myRange, aliceRange, bobRange, myInput);
 		eval->InputAdded();
 	}
 
-	std::vector<int64_t> InputProducer::GetMasks(Range *range)
+	std::vector<uint64_t> InputProducer::GetMasks(Range *range)
 	{
 // 		MyDebug::NonNull(range);
-		std::vector<int64_t> ret(range->Length);
+		std::vector<uint64_t> ret(range->Length);
 		for(int idx = range->Start; idx < range->Start + range->Length; idx++)
 		{
 			ret[idx - range->Start] = masks[idx];
@@ -40,17 +40,17 @@ namespace CrossCheck
 		return ret;
 	}
 
-	void InputProducer::AddMyInput(IRange *myInputRange, IMaybe<std::vector<std::vector<int64_t> > > *myInput)
+	void InputProducer::AddMyInput(IRange *myInputRange, IMaybe<std::vector<std::vector<uint64_t> > > *myInput)
 	{
-		if (dynamic_cast<Range*>(myInputRange) != nullptr && dynamic_cast<Just<std::vector<std::vector<int64_t> > *>(myInput) != nullptr)
+		if (dynamic_cast<Range*>(myInputRange) != nullptr && dynamic_cast<Just<std::vector<std::vector<uint64_t> > *>(myInput) != nullptr)
 		{
 			ss << "AddMyInput\n";
 			Range *range = (Range *)myInputRange;
 			std::vector<unsigned char> temp = communicator->AwaitEvaluationPartner();
-			auto partnerMaskShare = ArrayEncoder::Decodeint64_t(temp);
+			auto partnerMaskShare = ArrayEncoder::Decodeuint64_t(temp);
 
-			std::vector<std::vector<int64_t> > myMaskedInput(range->Length);
-			std::vector<int64_t> myShare = share->operator[](range);
+			std::vector<std::vector<uint64_t> > myMaskedInput(range->Length);
+			std::vector<uint64_t> myShare = share->operator[](range);
 			
 			for(int idx = 0; idx < range->Length; idx++)
 			{
@@ -66,23 +66,23 @@ namespace CrossCheck
 // 		std::cout << ss.str() << std::endl;
 	}
 
-	void InputProducer::AddEvaluationInput(IRange *myInputRange, IRange *partnerInputRange, IMaybe<std::vector<std::vector<int64_t> > > *myInput)
+	void InputProducer::AddEvaluationInput(IRange *myInputRange, IRange *partnerInputRange, IMaybe<std::vector<std::vector<uint64_t> > > *myInput)
 	{
 // 		MyDebug::NonNull(myInputRange, partnerInputRange, myInput);
-// 		assert(dynamic_cast<Just<std::vector<int64_t> >*>(myInput) != nullptr ^ dynamic_cast<EmptyRange*>(myInputRange) != nullptr);
+// 		assert(dynamic_cast<Just<std::vector<uint64_t> >*>(myInput) != nullptr ^ dynamic_cast<EmptyRange*>(myInputRange) != nullptr);
 		
 		if (dynamic_cast<Range*>(partnerInputRange) != nullptr)
 		{
 			ss << "dynamic_cast<Range*>(partnerInputRange) != nullptr" << std::endl;
 			Range *range = (Range *)partnerInputRange;
-			std::vector<int64_t> mask = share->operator[](range);
+			std::vector<uint64_t> mask = share->operator[](range);
 			std::vector<unsigned char> maskArray = ArrayEncoder::Encode(mask);
 			communicator->SendEvaluationPartner(maskArray);
 			
 			AddMyInput(myInputRange, myInput);
 			
 			std::vector<unsigned char> temp2 = communicator->AwaitEvaluationPartner();
-			auto hisMaskedInput = ArrayEncoder::Decodeint64_t(temp2);
+			auto hisMaskedInput = ArrayEncoder::Decodeuint64_t(temp2);
 			
 			eval->AddInput(hisMaskedInput, (Range *)partnerInputRange);
 		}
@@ -93,16 +93,16 @@ namespace CrossCheck
 		}
 	}
 
-	void InputProducer::TransferInput(IRange *myInputRange, IRange *aliceRange, IRange *bobRange, IMaybe<std::vector<std::vector<int64_t> > > *myInput)
+	void InputProducer::TransferInput(IRange *myInputRange, IRange *aliceRange, IRange *bobRange, IMaybe<std::vector<std::vector<uint64_t> > > *myInput)
 	{
 // 		MyDebug::NonNull(myInputRange, aliceRange, bobRange, myInput);
-// 		assert(dynamic_cast<EmptyRange*>(myInputRange) != nullptr ^ dynamic_cast<Just<std::vector<int64_t> >*>(myInput) != nullptr);
+// 		assert(dynamic_cast<EmptyRange*>(myInputRange) != nullptr ^ dynamic_cast<Just<std::vector<uint64_t> >*>(myInput) != nullptr);
 		ss << "TransferInput: ";
 		if (dynamic_cast<Range*>(myInputRange) != nullptr)
 		{
 			ss << "dynamic_cast<Range*>(myInputRange) != nullptr" << std::endl;
 			Range *range = (Range *)myInputRange;
-			std::vector<std::vector<int64_t> >  maskedInput(range->Length);
+			std::vector<std::vector<uint64_t> >  maskedInput(range->Length);
 			for(int idx = 0; idx < range->Length; idx++)
 			{
 				maskedInput[idx] = masks[idx + range->Start] + myInput->getValue()[idx];
@@ -142,7 +142,7 @@ namespace CrossCheck
 // 			std::cout << "dynamic_cast<Range*>(iRange) != nullptr" << std::endl;
 			Range *range = (Range *)iRange;
 
-			eval->AddInput(ArrayEncoder::Decodeint64_t(maskedInput), range);
+			eval->AddInput(ArrayEncoder::Decodeuint64_t(maskedInput), range);
 			return maskedInput;
 		}
 		else

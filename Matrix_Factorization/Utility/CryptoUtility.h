@@ -1,4 +1,4 @@
-﻿#ifndef CRYPTO_UTILITY_H__
+#ifndef CRYPTO_UTILITY_H__
 #define CRYPTO_UTILITY_H__
 
 #pragma once
@@ -14,21 +14,24 @@
 
 namespace Utility
 {
+	std::ostream& operator<<( std::ostream& dest, __int128_t value );
+	std::ostream& operator<<( std::ostream& dest, __uint128_t value );
+	
 	class VectorOperation
 	{
 	public:
-		static std::vector<int64_t> Add(const std::vector<int64_t>& x, const std::vector<int64_t>& y);
-		static std::vector<int64_t> Sub(const std::vector<int64_t>& x, const std::vector<int64_t>& y);
-		static std::vector<int64_t> Mul(const int64_t x, const std::vector<int64_t>& y);
-		static std::vector<int64_t> Mul(const std::vector<int64_t>& x, const int64_t y);
-		static std::vector<int64_t> Mul(const std::vector<int64_t>& x, const std::vector<int64_t>& y);
-		static std::vector<int64_t> Dot(const std::vector<int64_t>& x, const std::vector<int64_t>& y);
+		static std::vector<uint64_t> Add(const std::vector<uint64_t>& x, const std::vector<uint64_t>& y);
+		static std::vector<uint64_t> Sub(const std::vector<uint64_t>& x, const std::vector<uint64_t>& y);
+		static std::vector<uint64_t> Mul(const uint64_t x, const std::vector<uint64_t>& y);
+		static std::vector<uint64_t> Mul(const std::vector<uint64_t>& x, const uint64_t y);
+		static std::vector<uint64_t> Mul(const std::vector<uint64_t>& x, const std::vector<uint64_t>& y);
+		static std::vector<uint64_t> Dot(const std::vector<uint64_t>& x, const std::vector<uint64_t>& y);
 	};
 	
 	class CryptoUtility
 	{
 	public:
-		static std::vector<int64_t> SampleSmallInput(int length);
+		static std::vector<uint64_t> SampleSmallInput(int length);
 		
 		static std::vector<unsigned char> SampleByteArray(int length);
 
@@ -36,7 +39,7 @@ namespace Utility
 		
 		static int32_t * SampleInt32Array(int length);
 		
-		static std::vector<int64_t>  SampleInt64Array(int length);
+		static std::vector<uint64_t>  SampleUInt64Array(int length);
 		
 		static std::vector<int> buildMaskIndex(const std::vector<int>& itemsPerUser);
 		
@@ -50,29 +53,23 @@ namespace Utility
 	class ArithmeticOperation
 	{
 	public:
-		static int64_t add(int64_t x, int64_t y){return x + y;}
-		static int64_t sub(int64_t x, int64_t y){return x - y;}
-		static int64_t mul(int64_t x, int64_t y){return (x * y) >> PRECISION_BIT_LENGTH;}
-		static int64_t div(int64_t x, int64_t y){return (x << PRECISION_BIT_LENGTH) / y;}
+		static uint64_t add(uint64_t x, uint64_t y){return x + y;}
+		static uint64_t sub(uint64_t x, uint64_t y){return x - y;}
+		static uint64_t mul(uint64_t x, uint64_t y){return (x * y) >> PRECISION_BIT_LENGTH;}
+		static uint64_t div(uint64_t x, uint64_t y){return (x << PRECISION_BIT_LENGTH) / y;}
 	};
 	
 	class ArrayEncoder
 	{
 	public:
-		static std::vector<int64_t> UCharVec2Int64tVec(std::vector<unsigned char> array);
+		static std::vector<uint64_t> UCharVec2UInt64tVec(std::vector<unsigned char> array);
 		
-		static std::vector<unsigned char> Encode(std::vector<int64_t> array);		
-		static std::vector<unsigned char> Encode(std::vector<uint64_t> array);
-		
-		static std::vector<unsigned char> Hash(std::vector<int64_t> array);
+		static std::vector<unsigned char> Encode(std::vector<uint64_t> array);	
 		static std::vector<unsigned char> Hash(std::vector<uint64_t> array);
 		
-		static std::vector<int64_t>  Decodeint64_t(std::vector<unsigned char> &array);
+		static std::vector<uint64_t>  Decodeuint64_t(std::vector<unsigned char> &array);
 		
-		static std::vector<unsigned char> EncodeInt64Array(std::vector<std::vector<int64_t> > array);
 		static std::vector<unsigned char> EncodeUInt64Array(std::vector<std::vector<uint64_t> > array);
-		
-		static std::vector<std::vector<int64_t> > DecodeInt64Array(std::vector<unsigned char> array);
 		static std::vector<std::vector<uint64_t> > DecodeUInt64Array(std::vector<unsigned char> array);
 		
 		/// Convert a 4-byte array to unsigned int value
@@ -124,12 +121,10 @@ namespace Utility
 		static void PrintByteArray(const std::vector<unsigned char>& array, const std::string& str);
 		static void PrintVector(const std::vector<int16_t>& input, const std::string& str);
 		static void PrintVector(const std::vector<uint16_t>& input, const std::string& str);
-		static void PrintVector(const std::vector<int64_t>& input, const std::string& str);
 		static void PrintVector(const std::vector<uint64_t>& input, const std::string& str);
-		static void PrintVector(const std::vector<std::vector<int64_t> >& input, const std::string& str, float scale);
 		static void PrintVector(const std::vector<std::vector<uint64_t> >& input, const std::string& str, float scale);
-		static void PrintMask(const std::vector<int64_t>& masks, const std::vector<int>& maskIndex, const std::vector<int>& itemsPerUser, const std::string& str);
-		static std::vector<std::vector<int64_t> > GenerateInput(const std::vector<int>& itemsPerUser, int inputLength);
+		static void PrintMask(const std::vector<uint64_t>& masks, const std::vector<int>& maskIndex, const std::vector<int>& itemsPerUser, const std::string& str);
+		static std::vector<std::vector<uint64_t> > GenerateInput(const std::vector<int>& itemsPerUser, int inputLength);
 	};
 }
 

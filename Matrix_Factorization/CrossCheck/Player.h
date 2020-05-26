@@ -1,4 +1,4 @@
-﻿#ifndef PLAYER_H__
+#ifndef PLAYER_H__
 #define PLAYER_H__
 
 #pragma once
@@ -45,10 +45,12 @@ namespace CrossCheck
 		// Hold <lx'>
 		PreprocessingShare *share;
 		
-		// Hold lx
-		std::vector<int64_t> masks;
-
-
+		// Hold lx or lz/2^d
+		std::vector<uint64_t> masks;
+		
+		// Hold lz 
+		std::vector<uint64_t> unTruncatedMasks;
+		
 		virtual bool getIsAlice() const = 0;
 
 		virtual bool getIsCrossCheckLeader() const = 0;
@@ -71,8 +73,8 @@ namespace CrossCheck
 
 		Player(Communicator *communicator, IRange* inputRanges);
 		
-		std::vector<std::vector<int64_t> > Run(LayeredArithmeticCircuit *lc, std::vector<std::vector<int64_t> >& input, std::vector<std::vector<uint64_t> >& inputMAC, uint64_t sharedBeta, Range *outputRange, const std::vector<int>& itemsPerUser, AESRNG *rng);
-// 		std::vector<std::vector<int64_t> > ProduceOutput(Range *range);
+		std::vector<std::vector<uint64_t> > Run(LayeredArithmeticCircuit *lc, std::vector<std::vector<uint64_t> >& input, std::vector<std::vector<uint64_t> >& inputMAC, uint64_t sharedBeta, Range *outputRange, const std::vector<int>& itemsPerUser, AESRNG *rng);
+// 		std::vector<std::vector<uint64_t> > ProduceOutput(Range *range);
 		void LeakInformation();
 
 
@@ -83,7 +85,7 @@ namespace CrossCheck
 
 		void CrossCheck(int playerID);
 
-// 		std::vector<std::vector<int64_t> >ProduceOutput(Range *range);
+// 		std::vector<std::vector<uint64_t> >ProduceOutput(Range *range);
 	};
 
 	class PlayerOne : public Player

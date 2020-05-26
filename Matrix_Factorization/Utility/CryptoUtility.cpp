@@ -1,4 +1,4 @@
-﻿#include <cstring>
+#include <cstring>
 #include <iostream>
 #include <sstream>
 #include <random>
@@ -12,9 +12,58 @@
 
 namespace Utility
 {
-	std::vector<int64_t> VectorOperation::Add(const std::vector<int64_t>& x, const std::vector<int64_t>& y)
+	std::ostream& operator<<( std::ostream& dest, __int128_t value )
 	{
-		std::vector<int64_t> ret(x.size());
+		std::ostream::sentry s( dest );
+		if ( s ) {
+		    __uint128_t tmp = value < 0 ? -value : value;
+		    char buffer[ 128 ];
+		    char* d = std::end( buffer );
+		    do
+		    {
+			-- d;
+			*d = "0123456789"[ tmp % 10 ];
+			tmp /= 10;
+		    } while ( tmp != 0 );
+		    if ( value < 0 ) {
+			-- d;
+			*d = '-';
+		    }
+		    int len = std::end( buffer ) - d;
+		    if ( dest.rdbuf()->sputn( d, len ) != len ) {
+			dest.setstate( std::ios_base::badbit );
+		    }
+		}
+		return dest;
+	}
+	
+	std::ostream& operator<<( std::ostream& dest, __uint128_t value )
+	{
+		std::ostream::sentry s( dest );
+		if ( s ) {
+		    char buffer[ 128 ];
+		    char* d = std::end( buffer );
+		    do
+		    {
+			-- d;
+			*d = "0123456789"[ value % 10 ];
+			value /= 10;
+		    } while ( value != 0 );
+		    if ( value < 0 ) {
+			-- d;
+			*d = '-';
+		    }
+		    int len = std::end( buffer ) - d;
+		    if ( dest.rdbuf()->sputn( d, len ) != len ) {
+			dest.setstate( std::ios_base::badbit );
+		    }
+		}
+		return dest;
+	}
+
+	std::vector<uint64_t> VectorOperation::Add(const std::vector<uint64_t>& x, const std::vector<uint64_t>& y)
+	{
+		std::vector<uint64_t> ret(x.size());
 		
 		for(int idx = 0; idx < x.size(); idx++)
 		{
@@ -24,9 +73,9 @@ namespace Utility
 		return ret;
 	}
 	
-	std::vector<int64_t> VectorOperation::Sub(const std::vector<int64_t>& x, const std::vector<int64_t>& y)
+	std::vector<uint64_t> VectorOperation::Sub(const std::vector<uint64_t>& x, const std::vector<uint64_t>& y)
 	{
-		std::vector<int64_t> ret(x.size());
+		std::vector<uint64_t> ret(x.size());
 		
 		for(int idx = 0; idx < x.size(); idx++)
 		{
@@ -36,9 +85,9 @@ namespace Utility
 		return ret;
 	}
 	
-	std::vector<int64_t> VectorOperation::Mul(const int64_t x, const std::vector<int64_t>& y)
+	std::vector<uint64_t> VectorOperation::Mul(const uint64_t x, const std::vector<uint64_t>& y)
 	{
-		std::vector<int64_t> ret(y.size());
+		std::vector<uint64_t> ret(y.size());
 		
 		for(int idx = 0; idx < y.size(); idx++)
 		{
@@ -48,9 +97,9 @@ namespace Utility
 		return ret;
 	}
 	
-	std::vector<int64_t> VectorOperation::Mul(const std::vector<int64_t>& x, const int64_t y)
+	std::vector<uint64_t> VectorOperation::Mul(const std::vector<uint64_t>& x, const uint64_t y)
 	{
-		std::vector<int64_t> ret(x.size());
+		std::vector<uint64_t> ret(x.size());
 		
 		for(int idx = 0; idx < x.size(); idx++)
 		{
@@ -60,9 +109,9 @@ namespace Utility
 		return ret;
 	}
 	
-	std::vector<int64_t> VectorOperation::Mul(const std::vector<int64_t>& x, const std::vector<int64_t>& y)
+	std::vector<uint64_t> VectorOperation::Mul(const std::vector<uint64_t>& x, const std::vector<uint64_t>& y)
 	{
-		std::vector<int64_t> ret(x.size());
+		std::vector<uint64_t> ret(x.size());
 		
 		for(int idx = 0; idx < x.size(); idx++)
 		{
@@ -72,9 +121,9 @@ namespace Utility
 		return ret;
 	}
 	
-	std::vector<int64_t> VectorOperation::Dot(const std::vector<int64_t>& x, const std::vector<int64_t>& y)
+	std::vector<uint64_t> VectorOperation::Dot(const std::vector<uint64_t>& x, const std::vector<uint64_t>& y)
 	{
-		std::vector<int64_t> ret(1);
+		std::vector<uint64_t> ret(1);
 		
 		ret[0] = 0;
 		
@@ -86,15 +135,15 @@ namespace Utility
 		return ret;
 	}
 	
-	std::vector<int64_t> CryptoUtility::SampleSmallInput(int length){
+	std::vector<uint64_t> CryptoUtility::SampleSmallInput(int length){
 		unsigned seed =  std::chrono::system_clock::now().time_since_epoch().count();
 		std::default_random_engine generator(seed);
 		std::uniform_int_distribution<int> distribution(-3, 3);
 
-		std::vector<int64_t> input;
+		std::vector<uint64_t> input;
 		for(int idx = 0; idx < length; idx++)
 		{
-			int64_t rng = ((distribution(generator)) << 17);
+			uint64_t rng = ((distribution(generator)) << 17);
 			input.push_back(rng);
 		}
 		
@@ -127,14 +176,14 @@ namespace Utility
 		return (int32_t *)(sample);
 	}
 	
-	std::vector<int64_t> CryptoUtility::SampleInt64Array(int length)
+	std::vector<uint64_t> CryptoUtility::SampleUInt64Array(int length)
 	{
 		// Sample values in the range of 32 bits
 		unsigned char *sample = new unsigned char[length*sizeof(int32_t)];
 		RAND_bytes(sample, length*sizeof(int32_t));
 		int32_t *ptr = (int32_t *)sample;
 		
-		std::vector<int64_t> ret(length);
+		std::vector<uint64_t> ret(length);
 		
 		for(int idx = 0; idx < length; idx++)
 		{
@@ -263,22 +312,11 @@ namespace Utility
 		std::shuffle(data.begin(), data.end(), g);
 	}
 	      
-	std::vector<int64_t> ArrayEncoder::UCharVec2Int64tVec(std::vector<unsigned char> array)
+	std::vector<uint64_t> ArrayEncoder::UCharVec2UInt64tVec(std::vector<unsigned char> array)
 	{
-		int64_t *temp = (int64_t *)array.data();
-		std::vector<int64_t> ret(temp, temp + array.size()/sizeof(int64_t));
+		uint64_t *temp = (uint64_t *)array.data();
+		std::vector<uint64_t> ret(temp, temp + array.size()/sizeof(uint64_t));
 		return ret;
-	}
-	
-	std::vector<unsigned char> ArrayEncoder::Encode(std::vector<int64_t> array)
-	{
-		
- 		// assert(array != nullptr);
-		unsigned char *ptr = (unsigned char *)array.data();
-		
-		std::vector<unsigned char> newArray(ptr, ptr + array.size()*sizeof(int64_t));
-
-		return newArray;
 	}
 	
 	std::vector<unsigned char> ArrayEncoder::Encode(std::vector<uint64_t> array)
@@ -290,22 +328,6 @@ namespace Utility
 		std::vector<unsigned char> newArray(ptr, ptr + array.size()*sizeof(uint64_t));
 
 		return newArray;
-	}
-
-	std::vector<unsigned char> ArrayEncoder::Hash(std::vector<int64_t> array)
-	{
- 		// MyDebug::NonNull({array});
- 		// assert(array->Length != 0);
-		unsigned char *lengthInByte = int32ToByteArray(array.size());
-		std::vector<unsigned char> lengthVec(lengthInByte, lengthInByte + sizeof(int32_t));
-		
-		std::vector<unsigned char> encoding = Encode(array);
-		std::vector<unsigned char> hash1 = CryptoUtility::ComputeHash(encoding);		
-		lengthVec.insert(lengthVec.end(), hash1.begin(), hash1.end());
-		
-		std::vector<unsigned char> hash2 = CryptoUtility::ComputeHash(lengthVec);
-		
-		return hash2;
 	}
 	
 	std::vector<unsigned char> ArrayEncoder::Hash(std::vector<uint64_t> array)
@@ -324,51 +346,13 @@ namespace Utility
 		return hash2;
 	}
 
-	std::vector<int64_t> ArrayEncoder::Decodeint64_t(std::vector<unsigned char> &array)
+	std::vector<uint64_t> ArrayEncoder::Decodeuint64_t(std::vector<unsigned char> &array)
 	{
-		int64_t *temp = (int64_t *)array.data();
-		std::vector<int64_t> ret(temp, temp + array.size()/sizeof(int64_t));
+		uint64_t *temp = (uint64_t *)array.data();
+		std::vector<uint64_t> ret(temp, temp + array.size()/sizeof(uint64_t));
 		return ret;
 	}
 
-	std::vector<unsigned char> ArrayEncoder::EncodeInt64Array(std::vector<std::vector<int64_t> > array)
-	{
-		// array to vector of unsigned char
-		// structure: ||# of layers||# of mul gates per layers 0||...||# of mul gates per layers t||data of layer 0||...||data of layer t||
-		int arraySize = 0;
-		for(int idx = 0; idx < array.size(); idx++)
-		{
-			arraySize += array[idx].size();
-		}
-		
-		int64_t *data = new int64_t[1 + array.size() + arraySize];
-		
-		// ||# of layers||
-		data[0] = array.size();
-		
-		int startPoint = 1 + array.size();
-		
-		int64_t *dataPtr = data + startPoint;
-		
-		for(int idx = 0; idx < array.size(); idx++)
-		{
-			// ||# of mul gates per layers idx||
-			data[idx + 1] = array[idx].size();
-			
-			// ||data of layer idx||
-			for(int kdx = 0; kdx < array[idx].size(); kdx++)
-			{
-				*dataPtr++ = array[idx][kdx];
-			}
-		}
-		
-		unsigned char *temp = (unsigned char *)data;
-		
-		std::vector<unsigned char> tempVec; 
-		tempVec.insert(tempVec.end(), temp, temp + (1 + array.size() + arraySize)*sizeof(int64_t));
-		return tempVec;
-	}
-	
 	std::vector<unsigned char> ArrayEncoder::EncodeUInt64Array(std::vector<std::vector<uint64_t> > array)
 	{
 		// array to vector of unsigned char
@@ -405,41 +389,6 @@ namespace Utility
 		std::vector<unsigned char> tempVec; 
 		tempVec.insert(tempVec.end(), temp, temp + (1 + array.size() + arraySize)*sizeof(uint64_t));
 		return tempVec;
-	}
-
-	std::vector<std::vector<int64_t> > ArrayEncoder::DecodeInt64Array(std::vector<unsigned char> array)
-	{
- 		// std::cout << "DecodeInt64Array: ";
-		int64_t *data = (int64_t *)(array.data());
-		int count = data[0];
- 		// std::cout << data[0] << " ";
-		std::vector<int> mulGatesPerLayer;
-		
-		for(int idx = 0; idx < count; idx++)
-		{
-			mulGatesPerLayer.push_back(data[idx + 1]);
- 			// std::cout << data[idx + 1] << " ";
-		}
-		
-		int startPoint = 1 + mulGatesPerLayer.size();;
-		
-		std::vector<std::vector<int64_t> > ret(0);
-		
-		for(int idx = 0; idx < count; idx++)
-		{
-			std::vector<int64_t> temp(mulGatesPerLayer[idx]);
-			int64_t *dataPtr = data + startPoint;
-			
-			for(int kdx = 0; kdx < mulGatesPerLayer[idx]; kdx++)
-			{
-				temp[kdx] = *dataPtr++;
-			}
-			
-			startPoint += mulGatesPerLayer[idx];
-			ret.push_back(temp);
-		}
-		
-		return ret;
 	}
 	
 	std::vector<std::vector<uint64_t> > ArrayEncoder::DecodeUInt64Array(std::vector<unsigned char> array)
@@ -632,11 +581,6 @@ namespace Utility
 		return (ourShare + theirShare) == 0;
 	}
 	
-// 	uint64_t SPDZ2kMAC::multipleCheck(int party, std::vector<uint64_t> mac, std::vector<uint64_t> share)
-// 	{
-// 		return 0;
-// 	} 
-	
 	void TestUtility::PrintByteArray(const std::vector<unsigned char>& array, const std::string& str)
 	{
 		std::stringstream ss;
@@ -674,18 +618,6 @@ namespace Utility
 		std::cout << ss.str() << std::endl;
 	}
 	
-	void TestUtility::PrintVector(const std::vector<int64_t>& input, const std::string& str){
-		std::stringstream ss;
-		ss << str << "\n";
-		for(int idx = 0; idx < input.size(); idx++)
-		{
-			ss << (int)(input[idx]) << " ";
-		}
-		ss << "\n";
-		
-		std::cout << ss.str() << std::endl;
-	}
-	
 	void TestUtility::PrintVector(const std::vector<uint64_t>& input, const std::string& str){
 		std::stringstream ss;
 		ss << str << "\n";
@@ -697,23 +629,7 @@ namespace Utility
 		
 		std::cout << ss.str() << std::endl;
 	}
-	
-	void TestUtility::PrintVector(const std::vector<std::vector<int64_t> >& input, const std::string& str, float scale){
-		std::stringstream ss;
-		ss << str << "\n";
-		for(int idx = 0; idx < input.size(); idx++)
-		{
-			ss << idx << ": ";
-			for(int kdx = 0; kdx < input[idx].size(); kdx++)
-			{
-				ss << (float)(input[idx][kdx]/scale) << " ";
-			}
-			ss << "\n";
-		}
 		
-		std::cout << ss.str() << std::endl;
-	}
-	
 	void TestUtility::PrintVector(const std::vector<std::vector<uint64_t> >& input, const std::string& str, float scale){
 		std::stringstream ss;
 		ss << str << "\n";
@@ -730,7 +646,7 @@ namespace Utility
 		std::cout << ss.str() << std::endl;
 	}
 	
-	void TestUtility::PrintMask(const std::vector<int64_t>& masks, const std::vector<int>& maskIndex, const std::vector<int>& itemsPerUser, const std::string& str){
+	void TestUtility::PrintMask(const std::vector<uint64_t>& masks, const std::vector<int>& maskIndex, const std::vector<int>& itemsPerUser, const std::string& str){
 		// Count number of required random values: some wires need 10 masks, some 1
 		int numUsers = itemsPerUser.size();
 		int numEdges = 0;
@@ -747,35 +663,35 @@ namespace Utility
 			ss << idx << ": ";
 			for(int kdx = maskIndex[idx]; kdx < maskIndex[idx+1]; kdx++)
 			{
-				ss << (int64_t)(masks[kdx]) << " ";
+				ss << (uint64_t)(masks[kdx]) << " ";
 			}
 			ss << "\n";
 		}
 		
 		for(int kdx = maskIndex[numWires-1]; kdx < masks.size(); kdx++)
 		{
-			ss << (int64_t)(masks[kdx]) << " ";
+			ss << (uint64_t)(masks[kdx]) << " ";
 		}
 		ss << "\n";
 		
 		std::cout << ss.str() << std::endl;
 	}
 	
-	std::vector<std::vector<int64_t> > TestUtility::GenerateInput(const std::vector<int>& itemsPerUser, int inputLength)
+	std::vector<std::vector<uint64_t> > TestUtility::GenerateInput(const std::vector<int>& itemsPerUser, int inputLength)
 	{
 		unsigned seed =  std::chrono::system_clock::now().time_since_epoch().count();
 		std::default_random_engine generator(seed);
 		std::uniform_int_distribution<int> distribution(-31, 31);
 		std::uniform_int_distribution<int> distribution2(1, 5);
 		
-		std::vector<std::vector<int64_t> > input(inputLength);
+		std::vector<std::vector<uint64_t> > input(inputLength);
 		int count = 0;
 		for(int udx = 0; udx < itemsPerUser.size(); udx++)
 		{
 			// Input for u
 			for(int kdx = 0; kdx < 10; kdx++)
 			{
-			      int64_t rng = ((distribution(generator)) << 17);
+			      uint64_t rng = ((distribution(generator)) << 17);
 			      
 			      input[count].push_back(rng);
 			}
@@ -786,7 +702,7 @@ namespace Utility
 				// Input for v
 				for(int kdx = 0; kdx < 10; kdx++)
 				{
-				      int64_t rng = ((distribution(generator)) << 17);
+				      uint64_t rng = ((distribution(generator)) << 17);
 				      
 				      input[count].push_back(rng);
 				}

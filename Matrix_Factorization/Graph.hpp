@@ -102,7 +102,7 @@ public:
 
 	uint64_t sharedBeta;
 	std::vector<unsigned char> alpha;// = machine->getSharedSeedForPeerAndParty(party, partner, com);
-	__int128 alphaVal;
+	__uint128_t alphaVal;
 
 
 	Graph (int totalMachines, int machineId, int party, int totalEdges, int totalUsers, int totalItems, double epsilon, Machine* machine) {
@@ -132,16 +132,17 @@ public:
 		rng = new AESRNG(rand.data());
 		
 		// Each group agree on parameters for MAC computation
-		alpha = machine->getSharedSeedForPeerAndParty(party, partner, com);
-		alphaVal = *((__int128 *)(alpha.data()));
-		alphaVal = alphaVal % 0x10000000000;
+// 		alpha = machine->getSharedSeedForPeerAndParty(party, partner, com);
+// 		alphaVal = *((__uint128_t *)(alpha.data()));
+// 		alphaVal = alphaVal % 0x10000000000;
 		
-		MACGen = new SPDZ2kMAC((uint64_t)alphaVal, com);
+		std::vector<uint64_t> randoms = rng->GetUInt64Array(2);
 		
-		std::vector<uint64_t> randoms = rng->GetUInt64Array(1);
+		MACGen = new SPDZ2kMAC(randoms[0] + randoms[1], com);
+		
 		if(party == Charlie || party == David)
 		{
-			sharedBeta = MACGen->alpha - randoms[0];
+			sharedBeta = randoms[1];
 			com->SendAlice((unsigned char *)(&randoms[0]), sizeof(uint64_t));
 			com->SendBob((unsigned char *)(&sharedBeta), sizeof(uint64_t));
 		}
@@ -180,7 +181,7 @@ public:
 		}
 		else
 		{
-			// no of users in light load machine;
+			// no of types in light load machine;
 			nUsers = totalUsers/totalMachines; 
 		}
 		
@@ -211,7 +212,7 @@ public:
 			cout << "Error: memory could not be allocated";
 		}
 
-    	/* Alice & Bob generate data & compute its aMac, then send them to Charlie & David */
+		/* Alice & Bob generate data & compute its aMac, then send them to Charlie & David */
 		if (party == Alice || party == Bob)
 		{
 			SecretSharing(party, partner, secret_edges, nEdges, secret_nodes, nUsers, nItems, alpha);
@@ -223,7 +224,7 @@ public:
 		// printEdges(secret_edges, nEdges);
 
 
-    // **************************  Shuffle **********************************************************************************************************************************
+		//**************************  Shuffle **********************************************************************************************************************************
 		auto start = high_resolution_clock::now();
 		Timer t;
 
@@ -253,14 +254,14 @@ public:
 		{
 			/* Generate & Distribuite permutation seeds to the other party */
 			std::cout << machineId << ": start seed " << endl;
-			// std::vector<unsigned char> seed = machine->getSharedSeedForPeerAndParty(party, partner, com);
-			// __int128 permSeed = *((__int128 *)(alpha.data()));
+			std::vector<unsigned char> seed = machine->getSharedSeedForPeerAndParty(party, partner, com);
+			__uint128_t permSeed = *((__uint128_t *)(seed.data()));
 			std::cout << machineId << " end seed" << endl;
 			
 			std::vector<int> shuffledArray(totalEdges);
 			std::iota (std::begin(shuffledArray), std::end(shuffledArray), 0);  //Fills the range [first, last) with sequentially increasing values, starting with value 0.
 
-			std::mt19937 g(alphaVal);  // permutation function
+			std::mt19937 g(permSeed);  // permutation function
 			std::shuffle(shuffledArray.begin(), shuffledArray.end(), g);  // permute an integer string
 			
 			std::cout << machineId << ": Shuffling edges....." << std::endl;
@@ -320,7 +321,7 @@ public:
 
 		bool direction = true;
 		std::vector<int> elementsPerNode;
-		std::vector<std::vector<int64_t> > input;
+		std::vector<std::vector<uint64_t> > input;
 		std::vector<uint64_t> OpenedVertexIds(nEdges);
 		std::vector<uint64_t> MACId(nEdges);
 		std::vector<std::vector<uint64_t> > inputMAC;
@@ -458,7 +459,7 @@ public:
 		if(Alice == party || Bob == party)
 		{
 		    // input = TestUtility::GenerateInput(elementsPerNode, inputSize);
-			// std::cout << "Get shared masked input: " << inputSize << std::endl;
+			std::cout << "Get shared masked input: " << inputSize << std::endl;
 
 
 			input = getSharedMaskedInput(secret_nodes, nNodes, nUsers, inputSize, direction);
@@ -466,7 +467,7 @@ public:
 
 			inputMAC = getBetaMAC(secret_nodes, nNodes, nUsers, inputSize, direction);
 			
-			std::vector<unsigned char> flatInput = ArrayEncoder::EncodeInt64Array(input);
+			std::vector<unsigned char> flatInput = ArrayEncoder::EncodeUInt64Array(input);
 			uint64_t size = flatInput.size();
 			std::cout << "Flat input size: " << size << std::endl;
 			com->SendVerificationPartner((unsigned char *)(&size), sizeof(uint64_t));
@@ -475,12 +476,13 @@ public:
 		else
 		{
 			uint64_t size;
-			std::cout << "Flat input size: " << size << std::endl;
 			com->AwaitVerificationPartner((unsigned char *)(&size), sizeof(uint64_t));
+			
+			std::cout << "Flat input size: " << size << std::endl;
 			std::vector<unsigned char> flatInput(size);
 			com->AwaitVerificationPartner(flatInput.data(), size);
 			
-			input = ArrayEncoder::DecodeInt64Array(flatInput);
+			input = ArrayEncoder::DecodeUInt64Array(flatInput);
 		}
 		
 		if (party == Alice)   player = new PlayerOne(com, inputRange);
@@ -489,9 +491,14 @@ public:
 		if (party == David)   player = new PlayerFour(com, inputRange);
 
 		player->MACGen = MACGen;
+		
+		std::cout << "Executing the circuit" << std::endl;
+		// For the testing purpose, the output is the reconstructed one, not the shared one
+		std::vector<std::vector<uint64_t> > output = player->Run(lc, input, inputMAC, sharedBeta, outputRange, elementsPerNode, rng);
 
-		std::vector<std::vector<int64_t> > output = player->Run(lc, input, inputMAC, sharedBeta, outputRange, elementsPerNode, rng);
-
+		// Print the output
+		for(int idx = 0; idx < 10; idx++) std::cout << output[0][idx] << " ";
+		std::cout << std::endl;
 
 		auto ApplyDone = high_resolution_clock::now();
 		auto ApplyDuration = duration_cast<milliseconds>(ApplyDone - GatherDone);
@@ -585,7 +592,7 @@ public:
 				for(int idx = 0; idx < dimension; idx++)
 				{
 					edges[q].profile_u[idx] = (1<<15);
-					edges[q].profile_v[idx] = (1<<15);
+					edges[q].profile_v[idx] = ((idx % 2) - 1)*(1<<15);
 				}
 				q++;
 			}
@@ -600,7 +607,7 @@ public:
 			for(int idx = 0; idx < dimension; idx++)
 			{
 				edges[k].profile_u[idx] = (1<<15);
-				edges[k].profile_v[idx] = (1<<15);
+				edges[k].profile_v[idx] = ((idx % 2) - 1)*(1<<15);
 			}
 		}
 	}
@@ -1185,9 +1192,9 @@ public:
 		// **************************************************************************************************//
 	}
 
-	std::vector<std::vector<int64_t> > getSharedMaskedInput(Secret_Node *nodes, int nNodes, int nUsers, int inputSize, bool isEdgeIncoming)
+	std::vector<std::vector<uint64_t> > getSharedMaskedInput(Secret_Node *nodes, int nNodes, int nUsers, int inputSize, bool isEdgeIncoming)
 	{
-		std::vector<std::vector<int64_t> > input(inputSize);
+		std::vector<std::vector<uint64_t> > input(inputSize);
 		
 		if(isEdgeIncoming)
 		{
@@ -1199,7 +1206,7 @@ public:
 				input[count].resize(dimension);
 				for(uint64_t kdx = 0; kdx < dimension; kdx++)
 				{
-					input[count][kdx] = (int64_t)(nodes[idx].halfEdge[0].profile_v[kdx]);
+					input[count][kdx] = (uint64_t)(nodes[idx].halfEdge[0].profile_v[kdx]);
 				}
 				count++;
 				

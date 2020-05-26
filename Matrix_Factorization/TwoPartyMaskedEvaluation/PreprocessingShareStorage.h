@@ -1,4 +1,4 @@
-﻿#ifndef PREPROCESSING_SHARE_H
+#ifndef PREPROCESSING_SHARE_H
 #define PREPROCESSING_SHARE_H
 
 #pragma once
@@ -18,7 +18,7 @@ namespace TwoPartyMaskedEvaluation
 		
 		// Each wire may need 1 or 10 masks.
 		// masks[x] = lx
-		std::vector<int64_t> masks;
+		std::vector<uint64_t> masks;
 		std::vector<int> maskIndex;
 		
 		virtual ~PreprocessingShareStorage()
@@ -27,8 +27,8 @@ namespace TwoPartyMaskedEvaluation
 			delete [] bobShare;
 		}
 
-		PreprocessingShareStorage(PreprocessingShare *aliceShare, PreprocessingShare *bobShare, std::vector<int64_t>&& masks);
-		PreprocessingShareStorage(PreprocessingShare *aliceShare, PreprocessingShare *bobShare, std::vector<int64_t>&& masks, std::vector<int> maskIndex);
+		PreprocessingShareStorage(PreprocessingShare *aliceShare, PreprocessingShare *bobShare, std::vector<uint64_t>&& masks);
+		PreprocessingShareStorage(PreprocessingShare *aliceShare, PreprocessingShare *bobShare, std::vector<uint64_t>&& masks, std::vector<int> maskIndex);
 	};
 }
 

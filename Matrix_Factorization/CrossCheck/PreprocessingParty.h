@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <string>
 #include <vector>
 #include <iostream>
@@ -25,16 +25,16 @@ namespace CrossCheck
 	private:
 		Communicator *communicator;
 		bool isAlice = false;
-
+		int player;
 	public:
 		virtual ~PreprocessingParty()
 		{
 			delete communicator;
 		}
 
-		PreprocessingParty(Communicator *communicator, bool isAlice);
+		PreprocessingParty(int player, Communicator *communicator, bool isAlice);
 
-		void RunPreprocessing(LayeredArithmeticCircuit *lc, std::vector<int64_t>& masks, PreprocessingShare * &share, const std::vector<int>& itemsPerUser);
+		void RunPreprocessing(LayeredArithmeticCircuit *lc, std::vector<uint64_t>& masks, PreprocessingShare * &share, std::vector<uint64_t>& unTruncatedMasks, const std::vector<int>& itemsPerUser);
 		
 		void GenerateSeeds(std::vector<unsigned char> &seedAlice, std::vector<unsigned char> &seedBob)
 		{
@@ -42,8 +42,8 @@ namespace CrossCheck
 			seedBob   = CryptoUtility::SampleByteArray(32);
 		}
 
-		std::vector<int64_t> BuildPreprocessing(LayeredArithmeticCircuit *lc, const std::vector<int>& itemsPerUser);
+		void BuildPreprocessing(std::vector<uint64_t>& masks, std::vector<uint64_t>& unTruncatedMasks, LayeredArithmeticCircuit *lc, const std::vector<int>& itemsPerUser, const std::vector<int>& shareIndex);
 
-		PreprocessingShare *ReceivePreprocessing(LayeredArithmeticCircuit *lc, const std::vector<int>& itemsPerUser);
+		PreprocessingShare *ReceivePreprocessing(LayeredArithmeticCircuit *lc, const std::vector<int>& itemsPerUser, const std::vector<int>& shareIndex);
 	};
 }

@@ -1,4 +1,4 @@
-﻿#include <future>
+#include <future>
 #include <thread>
 #include <iostream>
 #include "PreprocessingBuilder.h"
@@ -13,7 +13,8 @@ using namespace Utility;
 
 namespace TwoPartyMaskedEvaluation
 {
-	std::vector<int64_t> MaskShareBuilder::Build(LayeredArithmeticCircuit *lc, AESRNG *rng, const std::vector<int>& itemsPerUser)
+	// Generate random value for each input wire and output wire of mult/cmult/dot/ndot gates
+	PreprocessingShare * MaskShareBuilder::Build(LayeredArithmeticCircuit *lc, AESRNG *rng, const std::vector<int>& itemsPerUser, const std::vector<int>& maskIndex)
 	{
 		Timer t;
 		
@@ -25,97 +26,104 @@ namespace TwoPartyMaskedEvaluation
 		}
 		
 		int numMasks = 6*DIM*numUsers + (2*DIM + 4)*sumNumItems;
+		int numInputMasks = DIM*(numUsers + sumNumItems) + 2*sumNumItems;
 		
-		std::vector<int64_t> maskShare = rng->GetMaskArray(numMasks);
-
-// 		t.Tick("AES time");
+		// Generate random mask for each wire in the input layer
+		std::vector<uint64_t> maskShare = rng->GetUInt64Array(numInputMasks);
 		
-		std::vector<int> maskIndex = CryptoUtility::buildMaskIndex(itemsPerUser);
+		// Fill the rest with 0
+		maskShare.resize(numMasks);
 		
+		// Count the number of masks for the output wires of the mult type gates
+		int nBeaverMasks = 0;
 		for (int layer = 0; layer < lc->Depth; layer++)
 		{
-			ArithmeticLayer *bl = lc->operator[](layer);
-
-			/// (x + lx) + (y + ly) = (x + y) + (lx + ly)
-			for (auto &g : bl->AddGates)
+			nBeaverMasks += DIM*lc->operator[](layer)->CMulGates.size();
+			nBeaverMasks += DIM*lc->operator[](layer)->MulGates.size();
+			nBeaverMasks +=     lc->operator[](layer)->DotGates.size();
+			nBeaverMasks += DIM*lc->operator[](layer)->NDotGates.size();
+		}
+		
+		std::vector<uint64_t> beaverMask = rng->GetUInt64Array(nBeaverMasks);
+		
+		// Now we generate beaver share for non-linear gates
+		// z <- x*y: beaverShare[z] = [lz + lx*ly]
+		// As this won't agree with current lz (mask[z] is a random value),
+		// lz needs to be corrected later.
+		std::vector<std::vector<uint64_t> > beaverShare;
+		
+		int count = 0;
+		for (int layer = 0;layer < lc->Depth;layer++)
+		{
+			auto cMulGates = lc->operator[](layer)->CMulGates;
+			if(cMulGates.size() > 0)
 			{
-				int leftIndex = maskIndex[g->LeftWire];
-				int rightIndex = maskIndex[g->RightWire];
-				int outIndex = maskIndex[g->OutputWire];
+				beaverShare.push_back(rng->GetMaskArray(DIM*cMulGates.size()));
 				
-				for(int idx = 0; idx < DIM; idx++)
+				for(auto &g : cMulGates)
 				{
-					maskShare[outIndex] = maskShare[leftIndex] + maskShare[rightIndex];
-					leftIndex++; rightIndex++; outIndex++;
-				}
-			}
-			
-			for (auto &g : bl->NAddGates)
-			{
-				int outIndex = maskIndex[g->OutputWire];
-				
-				for(int kdx = 0; kdx < DIM; kdx++)
-				{
-					maskShare[outIndex + kdx] = 0;
-				}
-				
-				for(int idx = 0; idx < g->InputWires.size(); idx++)
-				{
-					int inputIndex = maskIndex[g->InputWires[idx]];
-					
-					for(int kdx = 0; kdx < DIM; kdx++)
+					int wireIndex = g->OutputWire;
+					for(int idx = 0; idx < DIM; idx++)
 					{
-						maskShare[outIndex + kdx] += maskShare[inputIndex + kdx];
+						maskShare[maskIndex[wireIndex] + idx] = beaverMask[count];
+						count++;
 					}
 				}
 			}
 			
-			/// (x + lx) + c = (x + c) + lx
-			for (auto &g : bl->CAddGates)
+			auto mulGates = lc->operator[](layer)->MulGates;
+			if (mulGates.size() > 0)
 			{
-				int inIndex = maskIndex[g->InputWire];
-				int outIndex = maskIndex[g->OutputWire];
+				beaverShare.push_back(rng->GetMaskArray(DIM*mulGates.size()));
 				
-				for(int idx = 0; idx < DIM; idx++)
+				for(auto &g : mulGates)
 				{
-					maskShare[outIndex] = maskShare[inIndex];
-					inIndex++; outIndex++;
+					int wireIndex = g->OutputWire;
+					for(int idx = 0; idx < DIM; idx++)
+					{
+						maskShare[maskIndex[wireIndex] + idx] = beaverMask[count];
+						count++;
+					}
 				}
 			}
 			
-			/// (x + lx) - (y + ly) = (x - y) + (lx - ly)
-			for (auto &g : bl->SubGates)
+			auto dotGates = lc->operator[](layer)->DotGates;
+			if (dotGates.size() > 0)
 			{
-				int leftIndex = maskIndex[g->LeftWire];
-				int rightIndex = maskIndex[g->RightWire];
-				int outIndex = maskIndex[g->OutputWire];
+				beaverShare.push_back(rng->GetMaskArray(dotGates.size()));
 				
-				maskShare[outIndex] = maskShare[leftIndex] - maskShare[rightIndex];
-				leftIndex++; rightIndex++; outIndex++;
-			}
-
-			__int128 temp;
-			/// (x + lx)*c = x*c + lx*c
-			for (auto &g : bl->CMulGates)
-			{
-				int inIndex = maskIndex[g->InputWire];
-				int outIndex = maskIndex[g->OutputWire];
-				
-				for(int idx = 0; idx < DIM; idx++)
+				for(auto &g : dotGates)
 				{
-					temp = g->constant;
-					temp *= (__int128)maskShare[inIndex + idx];
-					temp = (temp >> PRECISION_BIT_LENGTH);
-					maskShare[outIndex + idx] = temp;
-					
-					maskShare[outIndex + idx] = maskShare[inIndex + idx];
+					int wireIndex = g->OutputWire;
+					maskShare[maskIndex[wireIndex]] = beaverMask[count];
+					count++;
+				}
+			}
+			
+			auto nDotGates = lc->operator[](layer)->NDotGates;
+			if (nDotGates.size() > 0)
+			{
+				beaverShare.push_back(rng->GetMaskArray(DIM*nDotGates.size()));
+				
+				for(auto &g : nDotGates)
+				{
+					int wireIndex = g->OutputWire;
+					for(int idx = 0; idx < DIM; idx++)
+					{
+						maskShare[maskIndex[wireIndex] + idx] = beaverMask[count];
+						count++;
+					}
 				}
 			}
 		}
 		
-// 		t.Tick("MaskShareBuilder");
-
-		return maskShare;
+// 		TestUtility::PrintVector(beaverShare, "Alice beaver share", 1);
+		
+// 		std::cout << "AlicePreprocessingBuilder::PreprocessingShare..." << std::endl;
+		PreprocessingShare *share = new PreprocessingShare(std::move(maskShare), std::move(beaverShare), maskIndex);
+		
+// 		t.Tick("AlicePreprocessingBuilder::Build");
+		return share;
 	}
 
 	std::vector<unsigned char> PreprocessingBuilder::getSeedAlice()
@@ -138,42 +146,52 @@ namespace TwoPartyMaskedEvaluation
 		privateSeedBob = value;
 	}
 
-	const std::vector<int64_t>& PreprocessingBuilder::getMasks()
+	const std::vector<uint64_t>& PreprocessingBuilder::getMasks()
 	{
 		return privateMasks;
 	}
+	
+	const std::vector<uint64_t>& PreprocessingBuilder::getUntruncatedMasks()
+	{
+		return unTruncatedMasks;
+	}
 
-	int64_t PreprocessingBuilder::getMasks(int idx)
+	uint64_t PreprocessingBuilder::getMasks(int idx)
 	{
 		return privateMasks[idx];
 	}
 	
-	void PreprocessingBuilder::setMasks(const std::vector<int64_t>& value)
+	void PreprocessingBuilder::setMasks(const std::vector<uint64_t>& value)
 	{
 		privateMasks = value;
 	}
 	
-	void PreprocessingBuilder::setMasks(std::vector<int64_t>&& value)
+	void PreprocessingBuilder::setMasks(std::vector<uint64_t>&& value)
 	{
 		privateMasks = std::move(value);
 	}
 
-	std::vector<std::vector<int64_t> > PreprocessingBuilder::getBobCorrection() 
+	void PreprocessingBuilder::setUntruncatedMasks(const std::vector<uint64_t>& m)
+	{
+		unTruncatedMasks = m;
+	}
+	
+	std::vector<std::vector<uint64_t> > PreprocessingBuilder::getBobCorrection() 
 	{
 		return privateBobCorrection;
 	}
 
-	void PreprocessingBuilder::addBobCorrection(std::vector<int64_t> value)
+	void PreprocessingBuilder::addBobCorrection(std::vector<uint64_t> value)
 	{
 		privateBobCorrection.push_back(value);
 	}
 	
-	void PreprocessingBuilder::setBobCorrection(const std::vector<std::vector<int64_t> >& value)
+	void PreprocessingBuilder::setBobCorrection(const std::vector<std::vector<uint64_t> >& value)
 	{
 		privateBobCorrection = value;
 	}
 	
-	void PreprocessingBuilder::BuildPreprocessing(std::vector<unsigned char>& seedAlice, std::vector<unsigned char>& seedBob, LayeredArithmeticCircuit *lc, const std::vector<int>& itemsPerUser)
+	void PreprocessingBuilder::BuildPreprocessing(std::vector<unsigned char>& seedAlice, std::vector<unsigned char>& seedBob, LayeredArithmeticCircuit *lc, const std::vector<int>& itemsPerUser, const std::vector<int>& maskIndex)
 	{
 		Timer t;
 		
@@ -186,222 +204,262 @@ namespace TwoPartyMaskedEvaluation
 		}
 		
 		int numMasks = 6*DIM*numUsers + (2*DIM + 4)*sumNumItems;
+		int numInputMasks = DIM*(numUsers + sumNumItems) + 2*sumNumItems;
+		
+// 		std::vector<int> maskIndex = CryptoUtility::buildMaskIndex(itemsPerUser);
 		
 		this->setSeedAlice(seedAlice);
 		this->setSeedBob(seedBob);
 		
-		AESRNG *rng = new AESRNG(seedBob.data());
+		AESRNG *rngAlice = new AESRNG(seedAlice.data());
+		AESRNG *rngBob = new AESRNG(seedBob.data());
 		
-		std::future<PreprocessingShare *> f1 = std::async(std::launch::async, [&]{ return AlicePreprocessingBuilder::Build(lc, seedAlice, itemsPerUser); });
-		std::future<std::vector<int64_t> > f2 = std::async(std::launch::async, [&]{ return MaskShareBuilder::Build(lc, rng, itemsPerUser); });
+		// Generate random masks for input wires
+		// Generate (incorrected) random masks and beaver triplets for output wires of mult-type gates
+		std::cout << "Get alice share..." << std::endl;
+		PreprocessingShare *aliceShare = MaskShareBuilder::Build(lc, rngAlice, itemsPerUser, maskIndex);
 		
-		f1.wait();
-		f2.wait();
+		std::cout << "Get bob share..." << std::endl;
+		PreprocessingShare *bobShare   = MaskShareBuilder::Build(lc, rngBob, itemsPerUser, maskIndex);
 		
-		
-// 		std::cout << "Get alice share..." << std::endl;
-		PreprocessingShare *aliceShare = f1.get();
-		
-// 		std::cout << "Get maskShare..." << std::endl;
-		std::vector<int64_t> maskShare  = f2.get();
-		
-// 		t.Tick("Generate share and mask");
-		
-		setBobCorrection(std::vector<std::vector<int64_t> >());
+		std::cout << "Get correction for bos's share..." << std::endl;
+		// Now, we need to correct the bob's shared mask for the output wires of mult-type gates
+		setBobCorrection(std::vector<std::vector<uint64_t> >());
 
-		std::vector<int64_t> privateMask(numMasks);
+		std::cout << "Reconstruct incorrect private masks" << std::endl;
+		std::vector<uint64_t> privateMask(numMasks);
 		
-// 		std::cout << "Adding mask shares..." << std::endl;
-		for(int idx = 0; idx < numMasks; idx++)
+		// Reconstruct the mask for input wires
+	    	for(int idx = 0; idx < numMasks; idx++)
 		{
-			privateMask[idx] = maskShare[idx] + aliceShare->maskShare[idx];
-// 			std::stringstream ss;
-// 			ss << "private mask idx: " << maskShare[idx] << " " << aliceShare->maskShare[idx] << " " << privateMask[idx] << std::endl;
-// 			std::cout << ss.str() << std::endl;
+			privateMask[idx] = aliceShare->maskShare[idx] + bobShare->maskShare[idx];
 		}
 		
-		for (int layer = 0; layer < lc->Depth; layer++)
+// 		std::vector<unsigned char> hashMask = ArrayEncoder::Hash(privateMask);
+// 		TestUtility::PrintByteArray(hashMask, "hash mask");
+		
+		std::cout << "Reconstruct beaver" << std::endl;
+		// Reconstruct beaver triplets for mult-type gates
+		std::vector<uint64_t> beaver;
+		for(int idx = 0; idx < aliceShare->beaverShare.size(); idx++)
+		{
+			for(int jdx = 0; jdx < aliceShare->beaverShare[idx].size(); jdx++)
+			{
+				beaver.push_back(aliceShare->beaverShare[idx][jdx] + bobShare->beaverShare[idx][jdx]);
+			}
+		}
+		
+		unTruncatedMasks.resize(numMasks);
+		for(int idx = 0; idx < numMasks; idx++)
+		{
+			unTruncatedMasks[idx] = 0;
+		}
+		
+// 		std::vector<unsigned char> hashBeaver = ArrayEncoder::Hash(beaver);
+// 		TestUtility::PrintByteArray(hashBeaver, "hash beaver");
+		
+		std::cout << "Beaver size: " << beaver.size() << std::endl;
+		
+		std::cout << "Compute bob's correction" << std::endl;
+		// Propagate the mask and get the corrections for bob 
+		std::vector<uint64_t> bobCorrections;
+		int count = 0;
+		
+		for (int layer = 0;layer < lc->Depth;layer++)
 		{
 			ArithmeticLayer *bl = lc->operator[](layer);
-			for (auto &g : bl->CMulGates)
-			{
-// 				int inIndex = maskIndex[g->InputWire];
-				int outIndex = aliceShare->maskIndex[g->OutputWire];
-				for(int idx = 0; idx < DIM; idx++)
-				{
-					privateMask[outIndex + idx] = ((g->constant*privateMask[outIndex + idx]) >> PRECISION_BIT_LENGTH);
-				}
-			}
 			
+			// Propagate the mask share for linear gates
+			
+// 			std::cout << "Add gates" << std::endl;
+			/// (x + lx) + (y + ly) = (x + y) + (lx + ly)
 			for (auto &g : bl->AddGates)
 			{
-				int leftIndex = aliceShare->maskIndex[g->LeftWire];
-				int rightIndex = aliceShare->maskIndex[g->RightWire];
-				int outIndex = aliceShare->maskIndex[g->OutputWire];
+				int leftIndex = maskIndex[g->LeftWire];
+				int rightIndex = maskIndex[g->RightWire];
+				int outIndex = maskIndex[g->OutputWire];
 				
 				for(int idx = 0; idx < DIM; idx++)
 				{
 					privateMask[outIndex + idx] = privateMask[leftIndex + idx] + privateMask[rightIndex + idx];
 				}
 			}
-		}
-				
-				
-		setMasks(std::move(privateMask));
-		
-// 		t.Tick("Get private mask");
-		
-		std::vector<int> maskIndex = CryptoUtility::buildMaskIndex(itemsPerUser);
-		
-// 		std::cout << "Adding beaver shares..." << std::endl;
-		for (int layer = 0; layer < lc->Depth; layer++)
-		{
-			auto mulGates = lc->operator[](layer)->MulGates;
-			int count = mulGates.size();
 			
-			if (count > 0)
+// 			std::cout << "NAdd gates" << std::endl;
+			// Sum (x_i + lx_i) = (Sum x_i) + (Sum lx_i)
+			for (auto &g : bl->NAddGates)
 			{
-				std::vector<int64_t> beaverShare(DIM*count);
-
-				for (int i = 0; i < count; i++)
+				int outIndex = maskIndex[g->OutputWire];
+				
+				for(int kdx = 0; kdx < DIM; kdx++)
+				{
+					privateMask[outIndex + kdx] = 0;
+				}
+				
+				for(int idx = 0; idx < g->InputWires.size(); idx++)
+				{
+					int inputIndex = maskIndex[g->InputWires[idx]];
+					
+					for(int kdx = 0; kdx < DIM; kdx++)
+					{
+						privateMask[outIndex + kdx] += privateMask[inputIndex + kdx];
+					}
+				}
+			}
+			
+// 			std::cout << "CAdd gates" << std::endl;
+			/// (x + lx) + c = (x + c) + lx
+			for (auto &g : bl->CAddGates)
+			{
+				int inIndex = maskIndex[g->InputWire];
+				int outIndex = maskIndex[g->OutputWire];
+				
+				for(int idx = 0; idx < DIM; idx++)
+				{
+					privateMask[outIndex + idx] = privateMask[inIndex + idx];
+				}
+			}
+			
+// 			std::cout << "Sub gates" << std::endl;
+			/// (x + lx) - (y + ly) = (x - y) + (lx - ly)
+			// Sub gates are for: rating - <u, v>
+			// The dimension of sub gate is 1 per wire
+			for (auto &g : bl->SubGates)
+			{
+				int leftIndex = maskIndex[g->LeftWire];
+				int rightIndex = maskIndex[g->RightWire];
+				int outIndex = maskIndex[g->OutputWire];
+				
+				privateMask[outIndex] = privateMask[leftIndex] - privateMask[rightIndex];
+			}
+		
+// 			std::cout << "CMul gates" << std::endl;
+			// CMul: beaver[z] = lz + lx*ly = lz (ly = 0 for const wire)
+			bobCorrections.resize(0);
+			auto cMulGates = lc->operator[](layer)->CMulGates;
+			
+			if (cMulGates.size() > 0)
+			{
+				for (auto &g : bl->CMulGates)
+				{
+					int outIndex = maskIndex[g->OutputWire];
+					for(int idx = 0; idx < DIM; idx++)
+					{
+						// Compute floor(lz/2^d)
+						unTruncatedMasks[outIndex] = beaver[count];
+						privateMask[outIndex] = (beaver[count] >> PRECISION_BIT_LENGTH);
+						
+						// Compute [lz/2^d]_2  =  floor(lz/2^d) - [lz/2^d]_1
+						bobCorrections.push_back(privateMask[outIndex] - aliceShare->maskShare[outIndex]);
+						
+						count++; outIndex++;
+					}
+				}
+				
+				addBobCorrection(bobCorrections);
+			}
+			
+// 			std::cout << "Mul gates" << std::endl;
+			// Correct maskShare[z] for output of mul gate
+			// lz = beaver[z] - lx*ly
+			bobCorrections.resize(0);
+			auto mulGates = lc->operator[](layer)->MulGates;
+			
+			if (mulGates.size() > 0)
+			{
+				for (int i = 0; i < mulGates.size(); i++)
 				{
 					MultiplicationGate *gate = mulGates[i];
+					int leftIndex = maskIndex[gate->LeftWire];
+					int rightIndex = maskIndex[gate->RightWire];
+					int outIndex = maskIndex[gate->OutputWire];
+					
 					for(int kdx = 0; kdx < DIM; kdx++)
 					{
 						// Multiplication between a scalar and a vector
-						beaverShare[DIM*i + kdx] = getMasks(maskIndex[gate->LeftWire])*getMasks(maskIndex[gate->RightWire] + kdx);
+						unTruncatedMasks[outIndex] = beaver[count] - privateMask[leftIndex]*privateMask[rightIndex];
+						privateMask[outIndex] = (beaver[count] - privateMask[leftIndex]*privateMask[rightIndex]) >> PRECISION_BIT_LENGTH;
+						
+						bobCorrections.push_back(privateMask[outIndex] - aliceShare->maskShare[outIndex]);
+						
+						count++; rightIndex++; outIndex++;
 					}
 				}
 				
-				std::vector<int64_t> beaverShareAlice = aliceShare->GetNextBeaverTriples();
-				
-				for(int idx = 0; idx < DIM*count; idx++)
-				{
-					beaverShare[idx] -= beaverShareAlice[idx];
-				}
-				
-				addBobCorrection(std::move(beaverShare));
+				addBobCorrection(std::move(bobCorrections));
 			}
 			
+// 			std::cout << "Dot gates" << std::endl;
+			bobCorrections.resize(0);
 			auto dotGates = lc->operator[](layer)->DotGates;
-			count = dotGates.size();
 			
-			if (count > 0)
+			if (dotGates.size() > 0)
 			{
-				std::vector<int64_t> beaverShare(count);
-				std::vector<int64_t> beaverShareAlice = aliceShare->GetNextBeaverTriples();
-				
-				for (int i = 0; i < count; i++)
+				for (int i = 0; i < dotGates.size(); i++)
 				{
 					DotProductGate *gate = dotGates[i];
-					beaverShare[i] = 0;
+					int leftIndex = maskIndex[gate->LeftWire];
+					int rightIndex = maskIndex[gate->RightWire];
+					int outIndex = maskIndex[gate->OutputWire];
+					
+					uint64_t temp = 0;
 					
 					for(int kdx = 0; kdx < DIM; kdx++)
 					{
-						beaverShare[i] += getMasks(maskIndex[gate->LeftWire] + kdx)*getMasks(maskIndex[gate->RightWire] + kdx);
+						temp += (privateMask[leftIndex + kdx]*privateMask[rightIndex + kdx]);
 					}
 					
-					beaverShare[i] -= beaverShareAlice[i];
+					unTruncatedMasks[outIndex] = beaver[count] - temp;
+					privateMask[outIndex] = (beaver[count] - temp) >> PRECISION_BIT_LENGTH;
+					count++;
+					
+					bobCorrections.push_back(privateMask[outIndex] - aliceShare->maskShare[outIndex]);
 				}
 				
-				addBobCorrection(std::move(beaverShare));
+				addBobCorrection(std::move(bobCorrections));
 			}
 			
+// 			std::cout << "NDot gates" << std::endl;
+			bobCorrections.resize(0);
 			auto nDotGates = lc->operator[](layer)->NDotGates;
-			count = nDotGates.size();
 			
-			if (count > 0)
+			// Dot gate structures
+			// Sum isReal_i*...
+			// No need for truncation as isReal = 0/1
+			// Left wires: InputWires[0] --> InputWires[#wire/2 - 1]
+			// Right wires: InputWires[#wires/2] --> InputWires[#wires - 1]
+			// Left wire: single value
+			// Right wire: vector of size DIM
+			if (nDotGates.size() > 0)
 			{
-				std::vector<int64_t> beaverShare(DIM*count);
-				std::vector<int64_t> beaverShareAlice = aliceShare->GetNextBeaverTriples();
-				
-				for (int i = 0; i < count; i++)
+				for (int i = 0; i < nDotGates.size(); i++)
 				{
 					NaryDotGate *gate = nDotGates[i];
 					
+					int outIndex = maskIndex[gate->OutputWire];
+					
 					for(int kdx = 0; kdx < DIM; kdx++)
-					{						
+					{			
+						uint64_t temp = 0;
 						int step = gate->InputWires.size()/2;
 						
 						for(int jdx = 0; jdx < step; jdx++)
 						{
-							beaverShare[DIM*i + kdx] += getMasks(maskIndex[gate->InputWires[jdx]])*getMasks(maskIndex[gate->InputWires[jdx + step]] + kdx);
+							temp += privateMask[maskIndex[gate->InputWires[jdx]]]*privateMask[maskIndex[gate->InputWires[jdx + step]] + kdx];
 						}
 						
-						beaverShare[DIM*i + kdx] = (beaverShare[DIM*i + kdx]);
-					}
-					
-					for(int kdx = 0; kdx < DIM; kdx++)
-					{
-						beaverShare[DIM*i + kdx] -= beaverShareAlice[DIM*i + kdx];
+						unTruncatedMasks[outIndex] = beaver[count] - temp;
+						privateMask[outIndex] = (beaver[count] - temp);
+						bobCorrections.push_back(privateMask[outIndex] - aliceShare->maskShare[outIndex]);
+						count++; outIndex++;
 					}
 				}
 				
-				addBobCorrection(std::move(beaverShare));
+				addBobCorrection(std::move(bobCorrections));
 			}
 		}
 		
-// 		t.Tick("Beaver thing");
-	}
-
-	PreprocessingShare *AlicePreprocessingBuilder::Build(LayeredArithmeticCircuit *lc, std::vector<unsigned char>& seed, const std::vector<int>& itemsPerUser)
-	{
-		Timer t;
-// 		std::cout << "AlicePreprocessingBuilder::Init rng..." << std::endl;
-		AESRNG *rng = new AESRNG(seed.data());
-		
-// 		std::cout << "AlicePreprocessingBuilder::MaskShareBuilder..." << std::endl;
-		auto maskShare = MaskShareBuilder::Build(lc, rng, itemsPerUser);
-				
-		std::vector<std::vector<int64_t> > beaverShare;
-		
-		for (int layer = 0;layer < lc->Depth;layer++)
-		{
-			auto mulGates = lc->operator[](layer)->MulGates;
-			int count = mulGates.size();
-			if (count > 0)
-			{
-				beaverShare.push_back(rng->GetMaskArray(DIM*count));
-			}
-			
-			auto dotGates = lc->operator[](layer)->DotGates;
-			count = dotGates.size();
-			if (count > 0)
-			{
-				beaverShare.push_back(rng->GetMaskArray(count));
-			}
-			
-			auto nDotGates = lc->operator[](layer)->NDotGates;
-			count = nDotGates.size();
-			if (count > 0)
-			{
-				beaverShare.push_back(rng->GetMaskArray(DIM*count));
-			}
-		}
-		
-// 		TestUtility::PrintVector(beaverShare, "Alice beaver share", 1);
-		
-// 		std::cout << "AlicePreprocessingBuilder::PreprocessingShare..." << std::endl;
-		PreprocessingShare *share = new PreprocessingShare(std::move(maskShare), std::move(beaverShare), CryptoUtility::buildMaskIndex(itemsPerUser));
-		
-// 		t.Tick("AlicePreprocessingBuilder::Build");
-		return share;
-	}
-	
-	PreprocessingShare *BobPreprocessingBuilder::Build(LayeredArithmeticCircuit *lc, std::vector<unsigned char>& seed, std::vector<std::vector<int64_t> >&& beaverShare, const std::vector<int>& itemsPerUser)
-	{
-// 		Timer t;
-// 		std::cout << "Bob: Init rng..." << std::endl;
-		AESRNG *rng = new AESRNG(seed.data());
-		
-// 		std::cout << "Bob: MaskShareBuilder::Build..." << std::endl;
-		auto maskShare = MaskShareBuilder::Build(lc, rng, itemsPerUser);
-		
-// 		std::cout << "Bob: MaskShareBuilder::End..." << std::endl;
-		PreprocessingShare *share = new PreprocessingShare(std::move(maskShare), std::move(beaverShare), CryptoUtility::buildMaskIndex(itemsPerUser));
-		
-// 		t.Tick("BobPreprocessingBuilder::Build");
-		
-		return share; 
+		std::cout << "set masks" << std::endl;
+		setMasks(std::move(privateMask));
 	}
 }

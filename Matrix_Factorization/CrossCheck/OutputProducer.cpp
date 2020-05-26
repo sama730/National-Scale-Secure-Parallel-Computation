@@ -1,4 +1,4 @@
-﻿#include <cassert>
+#include <cassert>
 #include <vector>
 #include <sstream>
 #include <stdint.h>
@@ -16,17 +16,17 @@ using namespace Utility;
 namespace CrossCheck
 {
 
-	OutputProducer::OutputProducer(Communicator *communicator, std::vector<std::vector<int64_t> > &maskedEvaluation, std::vector<int64_t> &mask)
+	OutputProducer::OutputProducer(Communicator *communicator, std::vector<std::vector<uint64_t> > &maskedEvaluation, std::vector<uint64_t> &mask)
 	{
 		this->maskedEvaluation = maskedEvaluation;
 		this->mask = mask;
 		this->communicator = communicator;
 	}
 
-	std::vector<std::vector<int64_t> > OutputProducer::ComputeOutput(Range *range)
+	std::vector<std::vector<uint64_t> > OutputProducer::ComputeOutput(Range *range)
 	{
 		assert(range != nullptr);
-		std::vector<int64_t> outputsMasks(range->Length);
+		std::vector<uint64_t> outputsMasks(range->Length);
 		for(int idx = range->Start; idx < range->Start + range->Length; idx++)
 		{
 			outputsMasks[idx - range->Start] = mask[idx];
@@ -52,7 +52,7 @@ namespace CrossCheck
 // // 			ss << maskedEvaluation[idx] << " ";
 // // 		}
 // 		
-		std::vector<int64_t> masks = ArrayEncoder::Decodeint64_t(v1);
+		std::vector<uint64_t> masks = ArrayEncoder::Decodeuint64_t(v1);
 		
 		for(int idx = range->Start; idx < range->Start + range->Length; idx++)
 		{

@@ -1,4 +1,4 @@
-﻿#include <stdint.h>
+#include <stdint.h>
 #include <iostream>
 #include "EmulatedMaskedEvaluation.h"
 #include "PreprocessingShare.h"
@@ -14,7 +14,7 @@ namespace TwoPartyMaskedEvaluation
 	
 	EmulatedMaskedEvaluation::EmulatedMaskedEvaluation(PreprocessingShare *aliceShare, PreprocessingShare *bobShare, std::vector<int> *maskIndex, LayeredArithmeticCircuit *lc) : aliceShare(aliceShare), bobShare(bobShare), maskIndex(maskIndex), lc(lc){}
 
-// 	void EmulatedMaskedEvaluation::AddInput(std::vector<int64_t> input, Range *range)
+// 	void EmulatedMaskedEvaluation::AddInput(std::vector<uint64_t> input, Range *range)
 // 	{
 // 		maskedEvaluation = std::move(input);
 // 		maskedEvaluation.resize(lc->NumWires);
@@ -27,7 +27,7 @@ namespace TwoPartyMaskedEvaluation
 // 		inputAdded = true;
 // 	}
 	
-	void EmulatedMaskedEvaluation::AddInput(std::vector<std::vector<int64_t> >&& input, Range *range)
+	void EmulatedMaskedEvaluation::AddInput(std::vector<std::vector<uint64_t> >&& input, Range *range)
 	{
 		maskedEvaluation = std::move(input);
 		maskedEvaluation.resize(lc->NumWires);
@@ -35,7 +35,7 @@ namespace TwoPartyMaskedEvaluation
 		inputAdded = true;
 	}
 
-// 	std::vector<int64_t> EmulatedMaskedEvaluation::Decrypt(std::vector<int64_t> mask, Range *range)
+// 	std::vector<uint64_t> EmulatedMaskedEvaluation::Decrypt(std::vector<uint64_t> mask, Range *range)
 // 	{
 // // 		assert(mask->Length == range->Length);
 // 
@@ -53,7 +53,7 @@ namespace TwoPartyMaskedEvaluation
 // 		return maskedEvaluation;
 // 	}
 
-	std::vector<std::vector<int64_t> > EmulatedMaskedEvaluation::Decrypt(std::vector<int64_t> mask, Range *range)
+	std::vector<std::vector<uint64_t> > EmulatedMaskedEvaluation::Decrypt(std::vector<uint64_t> mask, Range *range)
 	{
 // 		assert(mask->Length == range->Length);
 
@@ -81,8 +81,8 @@ namespace TwoPartyMaskedEvaluation
 			throw std::exception();
 		}
 
-// 		int64_t *aliceBeaver = aliceShare->GetNextBeaverTriples();
-// 		int64_t *bobBeaver = bobShare->GetNextBeaverTriples();
+// 		uint64_t *aliceBeaver = aliceShare->GetNextBeaverTriples();
+// 		uint64_t *bobBeaver = bobShare->GetNextBeaverTriples();
 
 		for (int i = 0; i < lc->Depth; i++)
 		{
@@ -102,8 +102,8 @@ namespace TwoPartyMaskedEvaluation
 	{
 		for (auto &g : lc->operator[](layer)->AddGates)
 		{
-			std::vector<int64_t> leftValue  = maskedEvaluation[g->LeftWire];
-			std::vector<int64_t> rightValue = maskedEvaluation[g->RightWire];
+			std::vector<uint64_t> leftValue  = maskedEvaluation[g->LeftWire];
+			std::vector<uint64_t> rightValue = maskedEvaluation[g->RightWire];
 			
 			maskedEvaluation[g->OutputWire].resize(leftValue.size());
 			
@@ -123,7 +123,7 @@ namespace TwoPartyMaskedEvaluation
 			
 			for(int idx = 0; idx < g->InputWires.size(); idx++)
 			{
-				std::vector<int64_t> wireValue  = maskedEvaluation[g->InputWires[idx]];
+				std::vector<uint64_t> wireValue  = maskedEvaluation[g->InputWires[idx]];
 				
 				for(int kdx = 0; kdx < DIM; kdx++)
 				{
@@ -137,8 +137,8 @@ namespace TwoPartyMaskedEvaluation
 	{
 		for (auto &g : lc->operator[](layer)->SubGates)
 		{
-			std::vector<int64_t> leftValue  = maskedEvaluation[g->LeftWire];
-			std::vector<int64_t> rightValue = maskedEvaluation[g->RightWire];
+			std::vector<uint64_t> leftValue  = maskedEvaluation[g->LeftWire];
+			std::vector<uint64_t> rightValue = maskedEvaluation[g->RightWire];
 			
 			maskedEvaluation[g->OutputWire].resize(leftValue.size());
 			
@@ -155,8 +155,8 @@ namespace TwoPartyMaskedEvaluation
 	{
 		for (auto &g : lc->operator[](layer)->CAddGates)
 		{
-			std::vector<int64_t> inputValue = maskedEvaluation[g->InputWire];
-			int64_t constant = g->constant;
+			std::vector<uint64_t> inputValue = maskedEvaluation[g->InputWire];
+			uint64_t constant = g->constant;
 			maskedEvaluation[g->OutputWire].resize(inputValue.size());
 			for(int idx = 0; idx < inputValue.size(); idx++)
 			{
@@ -171,8 +171,8 @@ namespace TwoPartyMaskedEvaluation
 	{
 		for (auto &g : lc->operator[](layer)->CMulGates)
 		{
-			std::vector<int64_t> inputValue = maskedEvaluation[g->InputWire];
-			int64_t constant = g->constant;
+			std::vector<uint64_t> inputValue = maskedEvaluation[g->InputWire];
+			uint64_t constant = g->constant;
 			maskedEvaluation[g->OutputWire].resize(inputValue.size());
 			
 			for(int idx = 0; idx < inputValue.size(); idx++)
@@ -188,8 +188,8 @@ namespace TwoPartyMaskedEvaluation
 		
 		if (mulGates.size() > 0)
 		{
-			std::vector<int64_t> aliceBeaverShare = aliceBeaver->GetNextBeaverTriples();
-			std::vector<int64_t> bobBeaverShare   = bobBeaver->GetNextBeaverTriples();
+			std::vector<uint64_t> aliceBeaverShare = aliceBeaver->GetNextBeaverTriples();
+			std::vector<uint64_t> bobBeaverShare   = bobBeaver->GetNextBeaverTriples();
 			
 			assert(aliceBeaverShare.size() == bobBeaverShare.size());
 			assert(aliceBeaverShare.size() == (DIM*mulGates.size()));
@@ -200,26 +200,26 @@ namespace TwoPartyMaskedEvaluation
 				
 				maskedEvaluation[g->OutputWire].resize(DIM);
 				
-				int64_t mx = maskedEvaluation[g->LeftWire][0];  // x + lx
-				std::vector<int64_t> my = maskedEvaluation[g->RightWire]; // y + ly
+				uint64_t mx = maskedEvaluation[g->LeftWire][0];  // x + lx
+				std::vector<uint64_t> my = maskedEvaluation[g->RightWire]; // y + ly
 
 				int leftWire = g->LeftWire;
 				int rightWire = g->RightWire;
 				int outputWire = g->OutputWire;
 				
-				int64_t lx1 = aliceShare->operator[]((*maskIndex)[leftWire]);
-				int64_t lx2 = bobShare->operator[]((*maskIndex)[leftWire]);
+				uint64_t lx1 = aliceShare->operator[]((*maskIndex)[leftWire]);
+				uint64_t lx2 = bobShare->operator[]((*maskIndex)[leftWire]);
 				
 				for(int kdx = 0; kdx < DIM; kdx++)
 				{
-					int64_t ly1 = aliceShare->operator[]((*maskIndex)[rightWire] + kdx);
-					int64_t lz1 = aliceShare->operator[]((*maskIndex)[outputWire] + kdx);
-					int64_t aliceBeaverValue = -ArithmeticOperation::mul(lx1, my[kdx]) - ArithmeticOperation::mul(ly1, mx) + lz1 + aliceBeaverShare[i*DIM + kdx];
+					uint64_t ly1 = aliceShare->operator[]((*maskIndex)[rightWire] + kdx);
+					uint64_t lz1 = aliceShare->operator[]((*maskIndex)[outputWire] + kdx);
+					uint64_t aliceBeaverValue = -ArithmeticOperation::mul(lx1, my[kdx]) - ArithmeticOperation::mul(ly1, mx) + lz1 + aliceBeaverShare[i*DIM + kdx];
 					
-					int64_t ly2 = bobShare->operator[]((*maskIndex)[rightWire] + kdx);
-					int64_t lz2 = bobShare->operator[]((*maskIndex)[outputWire] + kdx);
+					uint64_t ly2 = bobShare->operator[]((*maskIndex)[rightWire] + kdx);
+					uint64_t lz2 = bobShare->operator[]((*maskIndex)[outputWire] + kdx);
 					
-					int64_t bobBeaverValue = -ArithmeticOperation::mul(lx2, my[kdx]) - ArithmeticOperation::mul(ly2, mx) + lz2 + bobBeaverShare[i*DIM + kdx];
+					uint64_t bobBeaverValue = -ArithmeticOperation::mul(lx2, my[kdx]) - ArithmeticOperation::mul(ly2, mx) + lz2 + bobBeaverShare[i*DIM + kdx];
 					
 					maskedEvaluation[g->OutputWire][kdx] = ArithmeticOperation::mul(mx, my[kdx]) + aliceBeaverValue + bobBeaverValue;
 				}
@@ -232,8 +232,8 @@ namespace TwoPartyMaskedEvaluation
 		
 		if(dotGates.size() > 0)
 		{
-			std::vector<int64_t> aliceBeaverShare = aliceBeaver->GetNextBeaverTriples();
-			std::vector<int64_t> bobBeaverShare   = bobBeaver->GetNextBeaverTriples();
+			std::vector<uint64_t> aliceBeaverShare = aliceBeaver->GetNextBeaverTriples();
+			std::vector<uint64_t> bobBeaverShare   = bobBeaver->GetNextBeaverTriples();
 			
 			assert(aliceBeaverShare.size() == bobBeaverShare.size());
 			assert(aliceBeaverShare.size() == dotGates.size());
@@ -245,8 +245,8 @@ namespace TwoPartyMaskedEvaluation
 				maskedEvaluation[g->OutputWire].resize(1);
 				maskedEvaluation[g->OutputWire][0] = 0;
 				
-				std::vector<int64_t> mx = maskedEvaluation[g->LeftWire];  // x + lx
-				std::vector<int64_t> my = maskedEvaluation[g->RightWire]; // y + ly
+				std::vector<uint64_t> mx = maskedEvaluation[g->LeftWire];  // x + lx
+				std::vector<uint64_t> my = maskedEvaluation[g->RightWire]; // y + ly
 
 				int leftWire = g->LeftWire;
 				int rightWire = g->RightWire;
@@ -254,35 +254,35 @@ namespace TwoPartyMaskedEvaluation
 				
 				for(int kdx = 0; kdx < DIM; kdx++)
 				{
-					int64_t lx1 = aliceShare->operator[]((*maskIndex)[leftWire] + kdx);
-					int64_t ly1 = aliceShare->operator[]((*maskIndex)[rightWire] + kdx);
+					uint64_t lx1 = aliceShare->operator[]((*maskIndex)[leftWire] + kdx);
+					uint64_t ly1 = aliceShare->operator[]((*maskIndex)[rightWire] + kdx);
 					
-					int64_t aliceBeaverValue = -ArithmeticOperation::mul(lx1, my[kdx]) - ArithmeticOperation::mul(ly1, mx[kdx]);
+					uint64_t aliceBeaverValue = -ArithmeticOperation::mul(lx1, my[kdx]) - ArithmeticOperation::mul(ly1, mx[kdx]);
 					
-					int64_t lx2 = bobShare->operator[]((*maskIndex)[leftWire] + kdx);
-					int64_t ly2 = bobShare->operator[]((*maskIndex)[rightWire] + kdx);
+					uint64_t lx2 = bobShare->operator[]((*maskIndex)[leftWire] + kdx);
+					uint64_t ly2 = bobShare->operator[]((*maskIndex)[rightWire] + kdx);
 					
-					int64_t bobBeaverValue = -ArithmeticOperation::mul(lx2, my[kdx]) - ArithmeticOperation::mul(ly2, mx[kdx]);
+					uint64_t bobBeaverValue = -ArithmeticOperation::mul(lx2, my[kdx]) - ArithmeticOperation::mul(ly2, mx[kdx]);
 					
 					maskedEvaluation[g->OutputWire][0] += ArithmeticOperation::mul(mx[kdx], my[kdx]) + aliceBeaverValue + bobBeaverValue;
 				}
 				
-				int64_t lz1 = aliceShare->operator[]((*maskIndex)[outputWire]);
-				int64_t lz2 = bobShare->operator[]((*maskIndex)[outputWire]);
+				uint64_t lz1 = aliceShare->operator[]((*maskIndex)[outputWire]);
+				uint64_t lz2 = bobShare->operator[]((*maskIndex)[outputWire]);
 				maskedEvaluation[g->OutputWire][0] =  maskedEvaluation[g->OutputWire][0] + aliceBeaverShare[i] + bobBeaverShare[i] + lz1 + lz2;
 			}
 		}
 	}
 
-	int64_t EmulatedMaskedEvaluation::BeaverEvaluation(MultiplicationGate *g, int64_t beaver, int64_t mx, int64_t my, PreprocessingShare *share)
+	uint64_t EmulatedMaskedEvaluation::BeaverEvaluation(MultiplicationGate *g, uint64_t beaver, uint64_t mx, uint64_t my, PreprocessingShare *share)
 	{
 		int leftWire = g->LeftWire;
 		int rightWire = g->RightWire;
 		int outputWire = g->OutputWire;
 
-		int64_t lx = share->operator[](leftWire);
-		int64_t ly = share->operator[](rightWire);
-		int64_t lz = share->operator[](outputWire);
+		uint64_t lx = share->operator[](leftWire);
+		uint64_t ly = share->operator[](rightWire);
+		uint64_t lz = share->operator[](outputWire);
 
 		return -ArithmeticOperation::mul(lx, my) - ArithmeticOperation::mul(ly, mx) + lz + beaver;
 	}

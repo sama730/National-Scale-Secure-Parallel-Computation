@@ -1,4 +1,4 @@
-﻿#ifndef ISECURE_RNG_H___
+#ifndef ISECURE_RNG_H___
 #define ISECURE_RNG_H___
 
 #pragma once
@@ -14,6 +14,14 @@
 #include <openssl/conf.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>
+
+#include <emp-tool/utils/block.h>
+#include <emp-tool/utils/prp.h>
+#include <emp-tool/utils/prg.h>
+
+#if !defined (__AES__)
+    #error "AES-NI instructions not enabled"
+#endif
 
 namespace Utility
 {	
@@ -48,7 +56,7 @@ namespace Utility
 	private:
 		int counter;
 		unsigned char * key;
-
+		emp::PRG *prg; //((const char *)(&_key));
 		// Return the cipher text
 		unsigned char * Generate(unsigned char * plaintext, int plaintext_len, unsigned char * key);
 
@@ -59,6 +67,8 @@ namespace Utility
 		~AESRNG()
 		{
  			// delete [] key;
+		
+			delete prg;
 		}
 
 		unsigned char * GetByteArray();
@@ -66,7 +76,7 @@ namespace Utility
 		std::vector<uint32_t> GetUInt32Array(int length);
 		std::vector<uint64_t> GetUInt64Array(int length);
 		std::vector<uint64_t> GetUInt128Array(int length);
-		std::vector<int64_t>  GetMaskArray(int length);
+		std::vector<uint64_t>  GetMaskArray(int length);
 	};
 }
 

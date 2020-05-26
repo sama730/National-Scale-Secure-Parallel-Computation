@@ -1,4 +1,4 @@
-﻿#ifndef SIMPLE_PREPROCESSING_SHARE_H
+#ifndef SIMPLE_PREPROCESSING_SHARE_H
 #define SIMPLE_PREPROCESSING_SHARE_H
 
 #pragma once
@@ -16,8 +16,8 @@ namespace TwoPartyMaskedEvaluation
 	class SimplePreprocessingShare
 	{
 	private:
-		std::vector<int64_t> MaskShare;
-		std::vector<int64_t> BeaverShare;
+		std::vector<uint64_t> MaskShare;
+		std::vector<uint64_t> BeaverShare;
 
 	public:
 		virtual ~SimplePreprocessingShare()
@@ -26,13 +26,13 @@ namespace TwoPartyMaskedEvaluation
 			delete [] BeaverShare;
 		}
 
-		SimplePreprocessingShare(std::vector<int64_t> masks, std::vector<int64_t> beaverShare);
+		SimplePreprocessingShare(std::vector<uint64_t> masks, std::vector<uint64_t> beaverShare);
 
-		std::vector<int64_t> GetMaskShare(Range *range);
+		std::vector<uint64_t> GetMaskShare(Range *range);
 
-		int64_t operator [](int wire);
+		uint64_t operator [](int wire);
 
-		int64_t GetBeaverShare(int wire);
+		uint64_t GetBeaverShare(int wire);
 	};
 }
 

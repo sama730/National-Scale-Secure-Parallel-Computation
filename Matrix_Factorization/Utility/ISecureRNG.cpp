@@ -1,4 +1,4 @@
-﻿#include <cassert>
+#include <cassert>
 #include <iostream>
 #include <openssl/rand.h>
 #include <openssl/aes.h>
@@ -7,6 +7,15 @@
 #include <openssl/err.h>
 #include "CryptoUtility.h"
 #include "ISecureRNG.h"
+
+#include <emp-tool/utils/block.h>
+#include <emp-tool/utils/prp.h>
+#include <emp-tool/utils/prg.h>
+
+#if !defined (__AES__)
+    #error "AES-NI instructions not enabled"
+#endif
+
 
 namespace Utility
 {
@@ -32,6 +41,8 @@ namespace Utility
 		{
 			key[idx] = seed[idx];
 		}
+		
+		prg = new emp::PRG(seed);
 		counter = 0;
 	}
 
@@ -109,28 +120,27 @@ namespace Utility
 	std::vector<uint64_t> AESRNG::GetUInt64Array(int length)
 	{
 		std::vector<uint64_t> ret(length);
-		
-		for(int idx = 0; idx < length/2; idx++)
+#if !defined (__AES__)
+		for(int idx = 0; idx < length; idx++)
 		{
-			uint64_t *prng = (uint64_t *)GetByteArray();
-			
-			ret[2*idx] = prng[0];
-			ret[2*idx + 1] = prng[1];
+			unsigned char *prng = GetByteArray();
+			ret[idx] = *((unsigned int *)prng);
 			
 			delete [] prng;
 		}
+#else
+		emp::block *data = new emp::block[(1+length)/2];
 		
-		if(length - 2*(length/2) > 0)
+		prg->random_block(data, length/2);
+		
+		uint64_t *temp = (uint64_t *)data;
+		
+		for(int idx = 0; idx < length; idx++)
 		{
-		      uint64_t *prng = (uint64_t *)GetByteArray();
-		      
-		      for(int idx = 0; idx < length - 2*(length/2); idx++)
-		      {
-			      ret[2*(length/2) + idx] = prng[idx];
-		      }
-		      delete [] prng;
+			ret[idx] = temp[idx];
 		}
-		
+		delete [] data;
+#endif
 		return ret;
 	}
 	
@@ -150,32 +160,9 @@ namespace Utility
 // 		return ret;
 // 	}
 	
-	std::vector<int64_t> AESRNG::GetMaskArray(int length)
+	std::vector<uint64_t> AESRNG::GetMaskArray(int length)
 	{
-		std::vector<int64_t> ret(length);
-		
-		for(int idx = 0; idx < length/2; idx++)
-		{
-			int64_t *prng = (int64_t *)GetByteArray();
-			
-			ret[2*idx] = prng[0];
-			ret[2*idx + 1] = prng[1];
-			
-			delete [] prng;
-		}
-		
-		if(length - 2*(length/2) > 0)
-		{
-		      int64_t *prng = (int64_t *)GetByteArray();
-		      
-		      for(int idx = 0; idx < length - 2*(length/2); idx++)
-		      {
-			      ret[2*(length/2) + idx] = prng[idx];
-		      }
-		      delete [] prng;
-		}
-		
-		return ret;
+		return GetUInt64Array(length);
 	}
 
 	unsigned char * AESRNG::Generate(unsigned char * plaintext, int plaintext_len, unsigned char * key)

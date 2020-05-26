@@ -1,4 +1,4 @@
-﻿#include "CrossChecker.h"
+#include "CrossChecker.h"
 #include <cassert>
 #include <openssl/sha.h>
 #include "LeakyVetoProtocol.h"
@@ -20,12 +20,12 @@ namespace CrossCheck
 
 	}
 
-	bool CrossChecker::CrossCheck(std::vector<std::vector<int64_t> > doublyMaskedEvaluation, int playerID)
+	bool CrossChecker::CrossCheck(std::vector<std::vector<uint64_t> > doublyMaskedEvaluation, int playerID)
 	{
 		std::vector<unsigned char> mask = CreateMask(isCrossCheckLeader);
 		
 		// unroll output
-		std::vector<int64_t> temp;
+		std::vector<uint64_t> temp;
 		for(int idx = 0; idx < doublyMaskedEvaluation.size(); idx++)
 		{
 			temp.insert(temp.end(), doublyMaskedEvaluation[idx].begin(), doublyMaskedEvaluation[idx].end());
@@ -70,13 +70,13 @@ namespace CrossCheck
 
 		if (isCrossCheckLeader == LEADER)
 		{
-			mask = CryptoUtility::SampleByteArray(sizeof(int64_t));
+			mask = CryptoUtility::SampleByteArray(sizeof(uint64_t));
 			assert(mask.size() > 0);
 			communicator->SendVerificationPartner(mask.data(), mask.size());
 		}
 		else
 		{
-			mask.resize(sizeof(int64_t));
+			mask.resize(sizeof(uint64_t));
 			communicator->AwaitVerificationPartner(mask.data(), mask.size());
 		}
 

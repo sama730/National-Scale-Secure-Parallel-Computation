@@ -1,4 +1,4 @@
-﻿#ifndef MASKED_EVALUATION_H
+#ifndef MASKED_EVALUATION_H
 #define MASKED_EVALUATION_H
 
 #pragma once
@@ -37,9 +37,10 @@ namespace TwoPartyMaskedEvaluation
 		PreprocessingShare *share;
 		
 		// masks hold lx'
-		std::vector<int64_t> masks; 
+		std::vector<uint64_t> masks; 
+		std::vector<uint64_t> unTruncatedMasks;
 		
-		std::vector<std::vector<int64_t> > maskedEvaluation;
+		std::vector<std::vector<uint64_t> > maskedEvaluation;
 		
 		std::vector<int> *maskIndex;
 		
@@ -58,9 +59,9 @@ namespace TwoPartyMaskedEvaluation
 		MaskedEvaluation(LayeredArithmeticCircuit *lc, PreprocessingShare *share, Communicator *communicator);
 		MaskedEvaluation(LayeredArithmeticCircuit *lc, PreprocessingShare *share, std::vector<int> *maskIndex, Communicator *communicator);
 
-		void AddInput(const std::vector<std::vector<int64_t> >& input, Range *range);
+		void AddInput(const std::vector<std::vector<uint64_t> >& input, Range *range);
 
-		std::vector<std::vector<int64_t> > Decrypt(std::vector<int64_t> mask, Range *range);
+		std::vector<std::vector<uint64_t> > Decrypt(std::vector<uint64_t> mask, Range *range);
 
 		/// <summary>
 		/// Computes the masked evaluation of a circuit on a layer per layer basis. 
@@ -78,14 +79,14 @@ namespace TwoPartyMaskedEvaluation
 		
 		void EvaluateNAddGate(int layer);
 
-		void EvaluateMulGate(int layer, PreprocessingShare *beaver);
+		void EvaluateMulGate(int layer);
 		
-		void EvaluateDotGate(int layer, PreprocessingShare *beaver);
+		void EvaluateDotGate(int layer);
 		
-		void EvaluateNDotGate(int layer, PreprocessingShare *beaver);
+		void EvaluateNDotGate(int layer);
 
 	private:
-// 		int64_t BeaverEvaluation(MultiplicationGate *ag, int64_t beaver, PreprocessingShare *share);
+// 		uint64_t BeaverEvaluation(MultiplicationGate *ag, uint64_t beaver, PreprocessingShare *share);
 
 	};
 }

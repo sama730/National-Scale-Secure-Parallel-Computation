@@ -1,4 +1,4 @@
-﻿#include <openssl/rand.h>
+#include <openssl/rand.h>
 #include <stdint.h>
 
 #include "SimplePreprocessingBuilder.h"
@@ -23,11 +23,11 @@ namespace TwoPartyMaskedEvaluation
 		AESRNG *rng = new AESRNG(seed.data());
 		
 		/// masks contain lx for wire x
-// 		std::vector<int64_t> masks(length);
-		std::vector<int64_t> masks = rng->GetMaskArray(length); //CryptoUtility::SampleInt64Array(length);
+// 		std::vector<uint64_t> masks(length);
+		std::vector<uint64_t> masks = rng->GetMaskArray(length); //CryptoUtility::SampleUInt64Array(length);
 		
-		std::vector<std::vector<int64_t> > aliceBeaverShares;
-		std::vector<std::vector<int64_t> > bobBeaverShares;
+		std::vector<std::vector<uint64_t> > aliceBeaverShares;
+		std::vector<std::vector<uint64_t> > bobBeaverShares;
 		
 		for (int ilayer = 0; ilayer < lc->Depth; ilayer++)
 		{
@@ -64,7 +64,7 @@ namespace TwoPartyMaskedEvaluation
 			{
 				int mulCount = mulGates.size();
 
-				std::vector<int64_t> beaver(mulCount);
+				std::vector<uint64_t> beaver(mulCount);
 								
 				// For idx-th gate ( (x, y), z ): beaver[idx] = lx*ly
 				for (int idx = 0; idx < mulCount; idx++)
@@ -74,11 +74,11 @@ namespace TwoPartyMaskedEvaluation
 				}
 
 				// For idx-th gate ( (x, y), z ): aliceBeaverShare[idx] = <lx*ly> and bobBeaverShares[idx] = <lx*ly>
-				std::vector<int64_t> aliceBeaverShare = CryptoUtility::SampleInt64Array(mulCount);
+				std::vector<uint64_t> aliceBeaverShare = CryptoUtility::SampleUInt64Array(mulCount);
 				
 				aliceBeaverShares.push_back(std::move(aliceBeaverShare));
 				
-				std::vector<int64_t> bobBeaverShare(mulCount);
+				std::vector<uint64_t> bobBeaverShare(mulCount);
 				for(int idx = 0; idx < mulCount; idx++)
 				{
 					bobBeaverShare[idx] = ArithmeticOperation::sub(beaver[idx], aliceBeaverShare[idx]); 
@@ -92,9 +92,9 @@ namespace TwoPartyMaskedEvaluation
 
 		/// secret share for wires
 		// For wire x: masksShareAlice[x] = <lx> and masksShareBob[x] = <lx>
-		std::vector<int64_t> masksShareAlice = CryptoUtility::SampleInt64Array(length);
+		std::vector<uint64_t> masksShareAlice = CryptoUtility::SampleUInt64Array(length);
 		
-		std::vector<int64_t> masksShareBob(length);
+		std::vector<uint64_t> masksShareBob(length);
 		
 		for(int idx = 0; idx < length; idx++)
 		{
@@ -126,11 +126,11 @@ namespace TwoPartyMaskedEvaluation
 		
 		int numMasks = 6*DIM*numUsers + (2*DIM + 4)*sumNumItems;
 		
-		std::vector<std::vector<int64_t> > aliceBeaverShares;
-		std::vector<std::vector<int64_t> > bobBeaverShares;
+		std::vector<std::vector<uint64_t> > aliceBeaverShares;
+		std::vector<std::vector<uint64_t> > bobBeaverShares;
 		
 		/// Generate all the masks at the same time, then assign values to each wire later
-		std::vector<int64_t> masks = rng->GetMaskArray(numMasks);
+		std::vector<uint64_t> masks = rng->GetMaskArray(numMasks);
 		t.Tick("AES time");
 		
 		std::vector<int> maskIndex = CryptoUtility::buildMaskIndex(itemsPerUser);
@@ -226,8 +226,8 @@ namespace TwoPartyMaskedEvaluation
 				int mulCount = mulGates.size();
 
 				// For idx-th gate ( (x, y), z ): aliceBeaverShare[idx] = <lx*ly> and bobBeaverShares[idx] = <lx*ly>
-				std::vector<int64_t> aliceBeaverShare = CryptoUtility::SampleInt64Array(DIM*mulCount);			
-				std::vector<int64_t> bobBeaverShare(DIM*mulCount);
+				std::vector<uint64_t> aliceBeaverShare = CryptoUtility::SampleUInt64Array(DIM*mulCount);			
+				std::vector<uint64_t> bobBeaverShare(DIM*mulCount);
 				
 				int count = 0;
 				// For idx-th gate ( (x, y), z ): beaver[idx] = lx*ly
@@ -257,8 +257,8 @@ namespace TwoPartyMaskedEvaluation
 				int dotCount = dotGates.size();
 
 				// For idx-th gate ( (x, y), z ): aliceBeaverShare[idx] = <lx*ly> and bobBeaverShares[idx] = <lx*ly>
-				std::vector<int64_t> aliceBeaverShare = CryptoUtility::SampleInt64Array(dotCount);
-				std::vector<int64_t> bobBeaverShare(dotCount);
+				std::vector<uint64_t> aliceBeaverShare = CryptoUtility::SampleUInt64Array(dotCount);
+				std::vector<uint64_t> bobBeaverShare(dotCount);
 								
 				// For idx-th gate ( (x, y), z ): beaver[idx] = lx*ly
 				for (int idx = 0; idx < dotCount; idx++)
@@ -287,8 +287,8 @@ namespace TwoPartyMaskedEvaluation
 			
 			if (count != 0)
 			{
-				std::vector<int64_t> aliceBeaverShare = CryptoUtility::SampleInt64Array(DIM*count);
-				std::vector<int64_t> bobBeaverShare(DIM*count);
+				std::vector<uint64_t> aliceBeaverShare = CryptoUtility::SampleUInt64Array(DIM*count);
+				std::vector<uint64_t> bobBeaverShare(DIM*count);
 				
 				for (int i = 0; i < count; i++)
 				{
@@ -319,9 +319,9 @@ namespace TwoPartyMaskedEvaluation
 		
 		/// secret share for wires
 		// For wire x: masksShareAlice[x] = <lx> and masksShareBob[x] = <lx>
-		std::vector<int64_t> masksShareAlice = CryptoUtility::SampleInt64Array(numMasks);
+		std::vector<uint64_t> masksShareAlice = CryptoUtility::SampleUInt64Array(numMasks);
 		t.Tick("Time to generate random share");
-		std::vector<int64_t> masksShareBob   = VectorOperation::Sub(masks, masksShareAlice);
+		std::vector<uint64_t> masksShareBob   = VectorOperation::Sub(masks, masksShareAlice);
 		t.Tick("Time to generate mask share");
 		
 		// aliceShare contains <lx> for each wire, and <lx*ly> for each MUL gate

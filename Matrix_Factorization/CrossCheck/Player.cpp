@@ -1,4 +1,4 @@
-﻿#include <future>
+#include <future>
 #include <thread>
 #include <climits>
 #include <sstream>
@@ -26,13 +26,13 @@ namespace CrossCheck
 		passedCrossChecking = false;
 	}
 	
-	std::vector<std::vector<int64_t> > Player::Run(LayeredArithmeticCircuit *lc, std::vector<std::vector<int64_t> >& input, std::vector<std::vector<uint64_t> >& inputMAC, uint64_t sharedBeta, Range *outputRange, const std::vector<int>& itemsPerUser, AESRNG *rng)
+	std::vector<std::vector<uint64_t> > Player::Run(LayeredArithmeticCircuit *lc, std::vector<std::vector<uint64_t> >& input, std::vector<std::vector<uint64_t> >& inputMAC, uint64_t sharedBeta, Range *outputRange, const std::vector<int>& itemsPerUser, AESRNG *rng)
 	{
-// 		Timer t;
+		Timer t;
 		
 		PrepareComputation(lc, itemsPerUser);
 		
-// 		t.Tick("PrepareComputation() elapsed time: ");
+		t.Tick("PrepareComputation() elapsed time: ");
 		
 
 
@@ -55,7 +55,7 @@ namespace CrossCheck
 			}
 		}
 		
-		std::vector<unsigned char> ourShare = ArrayEncoder::EncodeInt64Array(input);
+		std::vector<unsigned char> ourShare = ArrayEncoder::EncodeUInt64Array(input);
 		std::vector<unsigned char> theirShare(ourShare.size());
 		
 		if (getIsAlice())
@@ -70,7 +70,7 @@ namespace CrossCheck
 		}
 		
 		
-		std::vector<std::vector<int64_t> > theirSharedMaskedInput = ArrayEncoder::DecodeInt64Array(theirShare);
+		std::vector<std::vector<uint64_t> > theirSharedMaskedInput = ArrayEncoder::DecodeUInt64Array(theirShare);
 		
 		// Compute (x + lx)
 		for(int idx = 0; idx < input.size(); idx++)
@@ -137,18 +137,18 @@ namespace CrossCheck
 		evaluation->AddInput(input, (Range *)inputRanges);
 		inputAdded = true;
 		
-// 		t.Tick("AddInput() elapsed time: ");
+		t.Tick("AddInput() elapsed time: ");
 		Evaluation();
 		
-// 		t.Tick("Evaluation() elapsed time: ");
+		t.Tick("Evaluation() elapsed time: ");
 		
 		CrossCheck(getMyIndex());
 		
-// 		t.Tick("CrossCheck() elapsed time: ");
+		t.Tick("CrossCheck() elapsed time: ");
 		
 		int start = evaluation->share->maskIndex[outputRange->Start];
 		
-		std::vector<int64_t> outputsMasks(masks.size() - start);
+		std::vector<uint64_t> outputsMasks(masks.size() - start);
 		for(int idx = start; idx < masks.size(); idx++)
 		{
 			outputsMasks[idx - start] = masks[idx];
@@ -156,31 +156,31 @@ namespace CrossCheck
 		
 		// Convert masked output to secret share
 		
-		std::vector<std::vector<int64_t> > sharedOutput(outputRange->Length);
+		std::vector<std::vector<uint64_t> > sharedOutput(outputRange->Length);
 		
-		std::vector<int64_t> share1 = rng->GetMaskArray(dimension*outputRange->Length);
-		std::vector<int64_t> share2(share1.size());
+		std::vector<uint64_t> share1 = rng->GetMaskArray(dimension*outputRange->Length);
+		std::vector<uint64_t> share2(share1.size());
 		
 		for(int idx = 0; idx < dimension*outputRange->Length; idx++)
 		{
 			share2[idx] = -share1[idx] - outputsMasks[idx];
 		}
 
-		std::vector<int64_t> theirShare1(share1.size()), theirShare2(share1.size());
+		std::vector<uint64_t> theirShare1(share1.size()), theirShare2(share1.size());
 		if(getMyIndex() == ALICE || getMyIndex() == BOB){
-			communicator->SendAlice((unsigned char *)(share1.data()), sizeof(int64_t)*share1.size());
-			communicator->SendBob((unsigned char *)(share2.data()), sizeof(int64_t)*share2.size());
+			communicator->SendAlice((unsigned char *)(share1.data()), sizeof(uint64_t)*share1.size());
+			communicator->SendBob((unsigned char *)(share2.data()), sizeof(uint64_t)*share2.size());
 						
-			communicator->AwaitAlice((unsigned char *)(theirShare1.data()), sizeof(int64_t)*share1.size());
-			communicator->AwaitBob((unsigned char *)(theirShare2.data()), sizeof(int64_t)*share2.size());
+			communicator->AwaitAlice((unsigned char *)(theirShare1.data()), sizeof(uint64_t)*share1.size());
+			communicator->AwaitBob((unsigned char *)(theirShare2.data()), sizeof(uint64_t)*share2.size());
 		}
 		else
 		{			
-			communicator->AwaitAlice((unsigned char *)(theirShare1.data()), sizeof(int64_t)*share1.size());
-			communicator->AwaitBob((unsigned char *)(theirShare2.data()), sizeof(int64_t)*share2.size());
+			communicator->AwaitAlice((unsigned char *)(theirShare1.data()), sizeof(uint64_t)*share1.size());
+			communicator->AwaitBob((unsigned char *)(theirShare2.data()), sizeof(uint64_t)*share2.size());
 
-			communicator->SendAlice((unsigned char *)(share1.data()), sizeof(int64_t)*share1.size());
-			communicator->SendBob((unsigned char *)(share2.data()), sizeof(int64_t)*share2.size());
+			communicator->SendAlice((unsigned char *)(share1.data()), sizeof(uint64_t)*share1.size());
+			communicator->SendBob((unsigned char *)(share2.data()), sizeof(uint64_t)*share2.size());
 		}
 		
 		assert(theirShare1 == theirShare2);
@@ -226,14 +226,14 @@ namespace CrossCheck
 			throw InconsistentInputException(std::string("Alice and Bob sent different output masks"));
 		}
 		
-		std::vector<int64_t> theirMask = ArrayEncoder::Decodeint64_t(v1);
+		std::vector<uint64_t> theirMask = ArrayEncoder::Decodeuint64_t(v1);
 		
 		return evaluation->Decrypt(theirMask, outputRange);
 	}
 
 	void Player::LeakInformation()
 	{
-// 		int64_t *doublyMasked = new int64_t[];
+// 		uint64_t *doublyMasked = new uint64_t[];
 // 		
 // 		masks->ImmutableXor(evaluation->maskedEvaluation);
 // 
@@ -249,12 +249,17 @@ namespace CrossCheck
 	void Player::PrepareComputation(LayeredArithmeticCircuit *lc, const std::vector<int>& itemsPerUser)
 	{
 // 		MyDebug::NonNull(lc);
-		auto party = new PreprocessingParty(communicator, getIsAlice());
-		std::future<void> f = std::async(std::launch::async, [&]{ party->RunPreprocessing(lc, masks, share, itemsPerUser); } );
-		f.wait(); f.get();
+		std::cout << "Pre-processing" << std::endl;
+		auto party = new PreprocessingParty(getMyIndex(), communicator, getIsAlice());
 		
+		std::cout << "Player ID: " << getMyIndex() << std::endl;
+		party->RunPreprocessing(lc, masks, share, unTruncatedMasks, itemsPerUser);
+// 		std::future<void> f = std::async(std::launch::async, [&]{ party->RunPreprocessing(lc, masks, share, itemsPerUser); } );
+// 		f.wait(); f.get();
+		std::cout << "Done Pre-processing" << std::endl;
 		evaluation = new MaskedEvaluation(lc, share, &(share->maskIndex), communicator);
 		evaluation->masks = masks;
+		evaluation->unTruncatedMasks = unTruncatedMasks;
 		evaluation->playerID = getMyIndex();
 		evaluation->maskIndex = &(share->maskIndex);
 		generatedPreprocessing = true;
@@ -280,7 +285,7 @@ namespace CrossCheck
 		}
 
 		CrossChecker *checker = new CrossChecker(communicator, getIsCrossCheckLeader());
-		std::vector<std::vector<int64_t> > doublyMaskedOutput = evaluation->maskedEvaluation;
+		std::vector<std::vector<uint64_t> > doublyMaskedOutput = evaluation->maskedEvaluation;
 		
 		
 // 		std::stringstream ss;
@@ -309,7 +314,7 @@ namespace CrossCheck
 		passedCrossChecking = true;
 	}
 
-// 	std::vector<std::vector<int64_t> > Player::ProduceOutput(Range *range)
+// 	std::vector<std::vector<uint64_t> > Player::ProduceOutput(Range *range)
 // 	{
 // 		if (!passedCrossChecking)
 // 		{

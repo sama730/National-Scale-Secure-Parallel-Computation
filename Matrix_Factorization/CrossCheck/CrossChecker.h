@@ -1,4 +1,4 @@
-﻿#ifndef CROSSCHECKER_H__
+#ifndef CROSSCHECKER_H__
 #define CROSSCHECKER_H__
 
 #pragma once
@@ -28,7 +28,7 @@ namespace CrossCheck
 
 		CrossChecker(Communicator *communicator, bool isCrossCheckLeader);
 
-		bool CrossCheck(std::vector<std::vector<int64_t> >  doublyMaskedEvaluation, int playerID);
+		bool CrossCheck(std::vector<std::vector<uint64_t> >  doublyMaskedEvaluation, int playerID);
 
 	private:
 		std::vector<unsigned char> CreateMask(bool isCrossCheckLeader);

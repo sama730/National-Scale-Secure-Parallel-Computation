@@ -1,4 +1,4 @@
-﻿#ifndef IPLAYER_H__
+#ifndef IPLAYER_H__
 #define IPLAYER_H__
 
 #pragma once
@@ -15,10 +15,10 @@ namespace CrossCheck
 	{
 	public:
 		virtual void PrepareComputation(LayeredArithmeticCircuit *lc) = 0;
-		virtual void AddInput(IMaybe<int64_t *> *input) = 0;
+		virtual void AddInput(IMaybe<uint64_t *> *input) = 0;
 		virtual void Evaluation() = 0;
 		virtual void CrossCheck() = 0;
-		virtual int64_t * ProduceOutput(Range *range) = 0;
+		virtual uint64_t * ProduceOutput(Range *range) = 0;
 	};
 }
 
